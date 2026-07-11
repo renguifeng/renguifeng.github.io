@@ -18,16 +18,16 @@ layout: none
     <div class="login-card">
       <div class="login-logo">📄</div>
       <h1>编辑器</h1>
-      <p>用 GitHub 登录后编辑你的文章。</p>
+      <p>用 GitHub 登录后管理你的文章。</p>
       <button id="login-btn" class="btn-primary">用 GitHub 登录</button>
       <p class="login-hint">登录会跳到 GitHub 授权，授权后自动返回。</p>
     </div>
   </div>
 
-  <!-- 主界面：左文件列表 / 右编辑器 -->
+  <!-- 主界面 -->
   <div id="app-view" class="view hidden">
     <header class="topbar">
-      <div class="brand">Renguifeng · 编辑器</div>
+      <div class="brand">Renguifeng · 文章管理</div>
       <div class="topbar-actions">
         <button id="new-btn" class="btn-ghost">+ 新建</button>
         <button id="save-btn" class="btn-primary">保存</button>
@@ -36,10 +36,16 @@ layout: none
     </header>
 
     <div class="main">
-      <!-- 文件列表 -->
+      <!-- 左栏：搜索 + 视图切换 + 内容 -->
       <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">资源管理器</div>
-        <div class="tree" id="file-tree"></div>
+        <div class="search-bar">
+          <input id="search-input" type="text" placeholder="搜索文件名或正文… (Ctrl+P)" autocomplete="off" />
+        </div>
+        <div class="view-switcher">
+          <button id="view-files-btn" class="view-btn active">文件</button>
+          <button id="view-tags-btn" class="view-btn">标签</button>
+        </div>
+        <div class="sidebar-content" id="sidebar-content"></div>
       </aside>
 
       <!-- 可拖拽分隔线 -->
@@ -47,20 +53,18 @@ layout: none
 
       <!-- 编辑器 -->
       <section class="editor-pane">
-        <div class="tab-bar">
-          <div class="tab active" id="active-tab">
-            <span class="tab-name">未打开文件</span>
-          </div>
-        </div>
+        <div class="tab-bar" id="tab-bar"></div>
         <div id="editor" class="editor"></div>
       </section>
     </div>
   </div>
 
+  <!-- 右键菜单 -->
+  <div id="context-menu" class="context-menu hidden"></div>
   <!-- 提示条 -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Monaco AMD loader（不再需要 marked，无预览） -->
+  <!-- Monaco AMD loader -->
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
   <!-- 应用逻辑 -->
   <script src="app.js"></script>
