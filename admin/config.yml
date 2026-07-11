@@ -13,9 +13,6 @@ backend:
 media_folder: "images/uploads"
 public_folder: "/images/uploads"
 
-# 站点信息（显示在 CMS 右上角）
-publish_mode: editorial_workflow   # 可选：开启草稿/审稿工作流；不需要可删掉这行
-
 collections:
   - name: "posts"
     label: "文章"
