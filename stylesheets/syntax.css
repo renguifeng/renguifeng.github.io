@@ -1,7 +1,7 @@
 /* =========================================================
-   代码高亮 — Rouge 生成的 .highlight token 配色
-   GitHub 浅色风格。配合 kramdown 默认输出的结构：
-   <div class="language-xxx highlighter-rouge"><div class="highlight"><pre><code>...
+   代码高亮 — VSCode Dark+ (Dark Modern) 主题
+   Rouge 生成的 .highlight token 映射到 VSCode 默认深色配色。
+   背景 #1e1e1e / 前景 #d4d4d4
    ========================================================= */
 
 /* ---------- 代码块容器 ---------- */
@@ -9,10 +9,10 @@
   margin: 24px 0;
 }
 .post-content .highlighter-rouge .highlight {
-  background: #f6f8fa;
-  border: 1px solid #e2e8f0;
+  background: #1e1e1e;
+  border: 1px solid #2d2d2d;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   overflow-x: auto;
   font-size: 14px;
   line-height: 1.6;
@@ -26,42 +26,44 @@
   border: 0;
   padding: 0;
   font-size: inherit;
-  color: #24292f;
+  color: #d4d4d4;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-/* ---------- token 配色 ---------- */
-.highlight .c, .highlight .cm, .highlight .c1, .highlight .cs { color: #6a737d; font-style: italic; }   /* Comment */
-.highlight .cp { color: #6a737d; font-weight: 600; }                                                      /* Comment.Preproc */
-.highlight .err { color: #cf222e; }                                                                        /* Error */
-.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .ow { color: #cf222e; }  /* Keyword */
-.highlight .kt { color: #953800; }                                                                         /* Keyword.Type */
-.highlight .o { color: #0550ae; }                                                                          /* Operator */
-.highlight .p { color: #24292f; }                                                                          /* Punctuation */
+/* ---------- token 配色（VSCode Dark+） ---------- */
+.highlight .c, .highlight .cm, .highlight .c1, .highlight .cs { color: #6a9955; font-style: italic; }   /* Comment 绿 */
+.highlight .cp { color: #6a9955; }                                                                        /* Comment.Preproc */
+.highlight .err { color: #f44747; }                                                                       /* Error 红 */
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn,
+.highlight .kp, .highlight .kr, .highlight .ow { color: #c586c0; }                                       /* Keyword/控制流 紫 */
+.highlight .kt { color: #4ec9b0; }                                                                        /* Keyword.Type 青 */
+.highlight .kd { color: #569cd6; }                                                                        /* declaration 关键字 蓝 */
+.highlight .o { color: #d4d4d4; }                                                                         /* Operator */
+.highlight .p { color: #d4d4d4; }                                                                         /* Punctuation */
 
 .highlight .s, .highlight .sb, .highlight .sc, .highlight .sd,
 .highlight .s2, .highlight .se, .highlight .sh, .highlight .si,
 .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss,
-.highlight .sa, .highlight .dl { color: #0a3069; }                                                        /* String */
+.highlight .sa, .highlight .dl { color: #ce9178; }                                                       /* String 橙 */
 
 .highlight .m, .highlight .mf, .highlight .mh, .highlight .mi,
-.highlight .mo, .highlight .il { color: #0550ae; }                                                        /* Number */
+.highlight .mo, .highlight .il { color: #b5cea8; }                                                       /* Number 浅绿 */
 
-.highlight .na { color: #0550ae; }                                                                         /* Name.Attribute */
-.highlight .nb, .highlight .bp { color: #6639ba; }                                                         /* Name.Builtin */
-.highlight .nc { color: #953800; }                                                                         /* Name.Class */
-.highlight .no { color: #0550ae; }                                                                         /* Name.Constant */
-.highlight .ni { color: #6639ba; }                                                                         /* Name.Entity */
-.highlight .ne, .highlight .nf, .highlight .fm { color: #8250df; }                                         /* Name.Function / Exception */
-.highlight .nn { color: #6639ba; }                                                                         /* Name.Namespace */
-.highlight .nt { color: #116329; }                                                                         /* Name.Tag */
-.highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm { color: #953900; }         /* Name.Variable */
-.highlight .nl { color: #953900; }                                                                         /* Name.Label */
+.highlight .na { color: #9cdcfe; }                                                                        /* Name.Attribute 浅蓝 */
+.highlight .nb, .highlight .bp { color: #4ec9b0; }                                                        /* Name.Builtin 青 */
+.highlight .nc { color: #4ec9b0; }                                                                        /* Name.Class 青 */
+.highlight .no { color: #4fc1ff; }                                                                        /* Name.Constant 亮蓝 */
+.highlight .ni { color: #569cd6; }                                                                        /* Name.Entity 蓝 */
+.highlight .ne, .highlight .nf, .highlight .fm { color: #dcdcaa; }                                        /* Name.Function 黄 */
+.highlight .nn { color: #4ec9b0; }                                                                        /* Name.Namespace 青 */
+.highlight .nt { color: #569cd6; }                                                                        /* Name.Tag 蓝 */
+.highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm { color: #9cdcfe; }        /* Name.Variable 浅蓝 */
+.highlight .nl { color: #9cdcfe; }                                                                        /* Name.Label 浅蓝 */
 
-.highlight .l { color: #0550ae; }                                                                          /* Literal */
+.highlight .l { color: #b5cea8; }                                                                         /* Literal 浅绿 */
 
-/* diff / 通用增删 */
-.highlight .gd { color: #82071e; background: #ffebe9; }                                                    /* Generic.Deleted */
-.highlight .gi { color: #116329; background: #dafbe1; }                                                    /* Generic.Inserted */
-.highlight .gu { color: #6e7781; font-weight: 600; }                                                       /* Generic.Heading */
-.highlight .w { color: #6e7781; }                                                                          /* Whitespace */
+/* diff / 增删 */
+.highlight .gd { color: #f44747; }                                                                        /* Generic.Deleted 红 */
+.highlight .gi { color: #b5cea8; }                                                                        /* Generic.Inserted 浅绿 */
+.highlight .gu { color: #6a9955; font-weight: 600; }                                                      /* Generic.Heading 绿 */
+.highlight .w { color: #d4d4d4; }                                                                         /* Whitespace */

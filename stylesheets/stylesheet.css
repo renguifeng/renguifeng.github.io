@@ -23,7 +23,7 @@
   /* 间距 / 形状 */
   --radius:   16px;
   --radius-sm: 10px;
-  --maxw:     960px;
+  --maxw:     1200px;
   --nav-h:    64px;
   --shadow:   0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
 }
@@ -253,7 +253,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 /* ---------- 作品集 ---------- */
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 22px;
 }
 
@@ -395,7 +395,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 /* ---------- 文章卡片 ---------- */
 .post-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 22px;
 }
 .post-card {
