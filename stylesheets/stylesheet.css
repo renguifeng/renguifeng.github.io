@@ -1,19 +1,22 @@
 /* =========================================================
-   Renguifeng.github.io — 现代浅色卡片风格
+   Renguifeng.github.io — VSCode Dark+ 深色主题
    纯 CSS，零外部依赖。配色/字体用 CSS 变量统一管理。
    ========================================================= */
 
 /* ---------- 设计令牌（变量） ---------- */
 :root {
-  /* 配色 */
-  --bg:            #ffffff;
-  --bg-alt:        #f8fafc;
-  --text:          #0f172a;
-  --text-muted:    #64748b;
-  --border:        #e2e8f0;
-  --accent:        #4f46e5;   /* indigo-600 */
-  --accent-strong: #4338ca;   /* indigo-700 */
-  --accent-soft:   #eef2ff;   /* indigo-50 */
+  /* 配色 — VSCode Dark+ 深色主题 */
+  --bg:            #1e1e1e;                  /* 编辑器背景 */
+  --bg-alt:        #252526;                  /* 区块 / 侧栏 */
+  --card-bg:       #2d2d2d;                  /* 卡片（略亮于背景） */
+  --text:          #d4d4d4;                  /* 前景文字 */
+  --text-muted:    #9a9a9a;                  /* 次要文字 */
+  --border:        #3c3c3c;                  /* 边框 */
+  --accent:        #3794ff;                  /* 链接蓝 */
+  --accent-strong: #4bb1ff;                  /* hover / chip 字色 */
+  --accent-soft:   rgba(55, 148, 255, 0.14); /* chip 底 */
+  --btn-bg:        #0e639c;                  /* VSCode 按钮蓝 */
+  --btn-bg-hover:  #1177bb;
 
   /* 排版 */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -25,7 +28,7 @@
   --radius-sm: 10px;
   --maxw:     1200px;
   --nav-h:    64px;
-  --shadow:   0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --shadow:   0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 /* ---------- 重置 ---------- */
@@ -73,7 +76,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
   top: 0;
   z-index: 50;
   height: var(--nav-h);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(30, 30, 30, 0.8);
   backdrop-filter: saturate(180%) blur(12px);
   -webkit-backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
@@ -140,7 +143,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
   max-width: 16ch;
 }
 .hero-title .accent {
-  background: linear-gradient(135deg, var(--accent), #818cf8);
+  background: linear-gradient(135deg, var(--accent), #7cc2ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -170,14 +173,14 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
   transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
 }
 .btn-primary {
-  background: var(--accent);
+  background: var(--btn-bg);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 6px 18px rgba(14, 99, 156, 0.45);
 }
-.btn-primary:hover { background: var(--accent-strong); color: #fff; transform: translateY(-2px); }
+.btn-primary:hover { background: var(--btn-bg-hover); color: #fff; transform: translateY(-2px); }
 
 .btn-ghost {
-  background: #fff;
+  background: var(--card-bg);
   color: var(--text);
   border: 1px solid var(--border);
 }
@@ -205,7 +208,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 
 /* ---------- 卡片 ---------- */
 .card {
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -227,7 +230,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 }
 .chips li {
   padding: 8px 16px;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 14px;
@@ -266,7 +269,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 .project-card:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
 }
 
 .project-top {
@@ -319,7 +322,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
   gap: 4px;
   padding: 22px 28px;
   min-width: 200px;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   text-align: left;
@@ -405,7 +408,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 .post-card:hover {
   transform: translateY(-4px);
   border-color: var(--accent);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, .08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
 }
 .post-card-link { display: block; color: inherit; }
 .post-card-link:hover { color: inherit; }
@@ -490,7 +493,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 .post-content {
   font-size: 17px;
   line-height: 1.8;
-  color: #1e293b;
+  color: var(--text);
   padding-bottom: 80px;
 }
 .post-content > *:first-child { margin-top: 0; }
@@ -559,7 +562,7 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 14px;
