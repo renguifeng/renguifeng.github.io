@@ -1,8 +1,8 @@
 /* ============================================================
    文章管理后台
-   - 缓存层（加载 _posts 正文，供搜索/标签）
-   - 多 model tab（每文件独立 model，保留撤销/光标）
-   - 文件名+正文搜索、标签分类、Ctrl+P、右键菜单
+   - 缓存层 / 多 model tab / 搜索 / 标签 / 右键菜单
+   - 图片拖拽粘贴上传 / 本地草稿防丢失
+   - Markdown 快捷键 / 字数统计
    ============================================================ */
 
 // ===== 配置（改仓库时改这里）=====
@@ -31,9 +31,7 @@ function debounce(fn, ms) {
   let t;
   return function (...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); };
 }
-function escapeHtml(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function toast(msg, type) {
   const el = $("toast");
   el.textContent = msg;
@@ -42,6 +40,7 @@ function toast(msg, type) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.add("hidden"), 3000);
 }
+function setStatusInfo(msg) { const el = $("status-info"); if (el) el.textContent = msg || ""; }
 
 // ===== GitHub Contents API =====
 async function gh(path, method, body) {
@@ -49,10 +48,7 @@ async function gh(path, method, body) {
     method: method || "GET",
     headers: { Authorization: "Bearer " + getToken(), Accept: "application/vnd.github+json" },
   };
-  if (body) {
-    opts.headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
+  if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
   const url = API + "/repos/" + CONFIG.owner + "/" + CONFIG.repo + "/contents/" + path + "?ref=" + CONFIG.branch;
   const res = await fetch(url, opts);
   if (res.status === 404) return null;
@@ -94,25 +90,142 @@ function parseFrontmatter(raw) {
   return { title: title, tags: tags };
 }
 
-// ===== 缓存层（搜索/标签用）=====
-const fileCache = new Map(); // path -> {path, name, sha, content, title, tags}
-let cacheStatus = "idle";    // idle | loading | ready
+// ===== 图片上传 =====
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error("读取文件失败"));
+    r.readAsDataURL(file);
+  });
+}
+async function uploadImage(file) {
+  const m = (file.name || "").match(/\.(\w+)$/);
+  const ext = m ? m[1].toLowerCase() : "png";
+  const filename = newSlug() + "." + ext;
+  const ghPath = "images/uploads/" + filename;
+  const dataUrl = await readFileAsDataURL(file);
+  const base64 = dataUrl.split(",")[1]; // 图片二进制的 base64，直接给 GitHub
+  await gh(ghPath, "PUT", { message: "上传图片 " + filename, content: base64, branch: CONFIG.branch });
+  return "/images/uploads/" + filename;
+}
+async function uploadAndInsert(file) {
+  if (!editor) return;
+  setStatusInfo("上传图片中…");
+  try {
+    const url = await uploadImage(file);
+    const sel = editor.getSelection();
+    editor.executeEdits("insert-image", [{ range: sel, text: "![](" + url + ")", forceMoveMarkers: true }]);
+    editor.focus();
+    toast("图片已插入", "success");
+  } catch (e) {
+    toast(e.status === 401 ? "登录已过期，请重新登录" : "图片上传失败：" + e.message, "error");
+  } finally {
+    setStatusInfo("");
+  }
+}
+function onEditorPaste(e) {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.type && it.type.indexOf("image/") === 0) {
+      const file = it.getAsFile();
+      if (file) { e.preventDefault(); e.stopImmediatePropagation(); uploadAndInsert(file); }
+      return;
+    }
+  }
+}
+function onEditorDragOver(e) {
+  if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).indexOf("Files") >= 0) e.preventDefault();
+}
+function onEditorDrop(e) {
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (!files || !files.length) return;
+  const img = Array.from(files).find((f) => f.type && f.type.indexOf("image/") === 0);
+  if (img) { e.preventDefault(); e.stopImmediatePropagation(); uploadAndInsert(img); }
+}
+
+// ===== 本地草稿（防丢失）=====
+function draftKey(path) { return "draft:" + path; }
+function saveDraft(tab) {
+  try { localStorage.setItem(draftKey(tab.path), tab.model.getValue()); } catch (e) {}
+}
+const draftTimers = new Map();
+function saveDraftDebounced(tab) {
+  const key = tab.path;
+  clearTimeout(draftTimers.get(key));
+  draftTimers.set(key, setTimeout(() => { saveDraft(tab); draftTimers.delete(key); }, 800));
+}
+function getDraft(path) { try { return localStorage.getItem(draftKey(path)); } catch (e) { return null; } }
+function clearDraft(path) { try { localStorage.removeItem(draftKey(path)); } catch (e) {} }
+
+// ===== Markdown 编辑辅助 =====
+function toggleWrap(symbol) {
+  if (!editor) return;
+  editor.pushUndoStop();
+  const sel = editor.getSelection();
+  const model = editor.getModel();
+  const text = model.getValueInRange(sel);
+  const sl = symbol.length;
+  let out;
+  if (text.length >= sl * 2 && text.substring(0, sl) === symbol && text.substring(text.length - sl) === symbol) {
+    out = text.substring(sl, text.length - sl);
+  } else {
+    out = symbol + text + symbol;
+  }
+  editor.executeEdits("md", [{ range: sel, text: out }]);
+  editor.pushUndoStop();
+  editor.focus();
+}
+function toggleHeading(level) {
+  if (!editor) return;
+  editor.pushUndoStop();
+  const pos = editor.getPosition();
+  const model = editor.getModel();
+  const line = model.getLineContent(pos.lineNumber);
+  const stripped = line.replace(/^#{1,6}\s*/, "");
+  editor.executeEdits("md", [{
+    range: { startLineNumber: pos.lineNumber, startColumn: 1, endLineNumber: pos.lineNumber, endColumn: line.length + 1 },
+    text: "#".repeat(level) + " " + stripped,
+  }]);
+  editor.pushUndoStop();
+  editor.focus();
+}
+function insertLink() {
+  if (!editor) return;
+  const sel = editor.getSelection();
+  const text = editor.getModel().getValueInRange(sel) || "链接文字";
+  editor.executeEdits("md", [{ range: sel, text: "[" + text + "](https://)" }]);
+  editor.focus();
+}
+
+// ===== 字数统计 =====
+function updateWordCount() {
+  const el = $("word-count");
+  if (!el) return;
+  const tab = activeTab();
+  if (!tab || !tab.model) { el.textContent = ""; return; }
+  const text = tab.model.getValue();
+  const cjk = (text.match(/[一-鿿]/g) || []).length;
+  const en = (text.match(/[a-zA-Z0-9]+/g) || []).length;
+  el.textContent = (cjk + en) + " 字" + (cjk ? " · 中文 " + cjk : "");
+}
+
+// ===== 缓存层 =====
+const fileCache = new Map();
+let cacheStatus = "idle";
 async function loadCache() {
   if (cacheStatus !== "idle") return;
   cacheStatus = "loading";
   if (!searchQuery && currentView === "tags") renderSidebar();
   try {
     const files = await listDir("_posts");
-    const entries = await Promise.all(
-      files.map((f) => getFile(f.path).then((d) => (d ? { meta: f, data: d } : null)))
-    );
+    const entries = await Promise.all(files.map((f) => getFile(f.path).then((d) => (d ? { meta: f, data: d } : null))));
     fileCache.clear();
     entries.filter(Boolean).forEach(({ meta, data }) => {
       const fm = parseFrontmatter(data.content);
-      fileCache.set(data.path, {
-        path: data.path, name: meta.name, sha: data.sha,
-        content: data.content, title: fm.title, tags: fm.tags,
-      });
+      fileCache.set(data.path, { path: data.path, name: meta.name, sha: data.sha, content: data.content, title: fm.title, tags: fm.tags });
     });
     cacheStatus = "ready";
   } catch (e) {
@@ -122,20 +235,23 @@ async function loadCache() {
   if (!searchQuery) renderSidebar();
 }
 
-// ===== Tab 层（多 model）=====
+// ===== Tab 层 =====
 let editor = null;
 let emptyModel = null;
-let openTabs = [];               // [{path, name, sha, model, dirty, viewState, isNew}]
+let openTabs = [];
 let activePath = null;
 let untitledSeq = 0;
 
 function findTab(path) { return openTabs.find((t) => t.path === path); }
 function activeTab() { return openTabs.find((t) => t.path === activePath); }
+function setTabDirty(tab, d) { if (tab.dirty === d) return; tab.dirty = d; refreshTabBar(); }
 
-function setTabDirty(tab, d) {
-  if (tab.dirty === d) return;
-  tab.dirty = d;
-  refreshTabBar();
+function attachModelListeners(tab) {
+  tab.model.onDidChangeContent(() => {
+    setTabDirty(tab, true);
+    saveDraftDebounced(tab);
+    updateWordCount();
+  });
 }
 
 async function openFile(path) {
@@ -145,10 +261,17 @@ async function openFile(path) {
   try {
     const f = await getFile(path);
     if (!f) return;
-    const model = monaco.editor.createModel(f.content, "markdown");
+    let content = f.content;
+    const draft = getDraft(f.path);
+    if (draft !== null && draft !== f.content) {
+      if (window.confirm("检测到该文件有未保存的本地草稿（可能是上次未正常关闭）。\n\n「确定」恢复草稿 / 「取消」加载服务器版本")) {
+        content = draft;
+      }
+    }
+    const model = monaco.editor.createModel(content, "markdown");
     const tab = { path: f.path, name: f.path.split("/").pop(), sha: f.sha, model: model, dirty: false, viewState: null, isNew: false };
-    model.onDidChangeContent(() => setTabDirty(tab, true));
     model.updateOptions({ tabSize: 2 });
+    attachModelListeners(tab);
     openTabs.push(tab);
     switchTab(f.path);
     refreshTabBar();
@@ -168,6 +291,7 @@ function switchTab(path) {
   editor.focus();
   refreshTabBar();
   setActiveInTree();
+  updateWordCount();
 }
 
 function closeTab(path, force) {
@@ -175,9 +299,10 @@ function closeTab(path, force) {
   if (idx < 0) return;
   const tab = openTabs[idx];
   if (tab.dirty && !force) {
-    if (!window.confirm('"' + tab.name + '" 有未保存修改，确认关闭？')) return;
+    if (!window.confirm('"' + tab.name + '" 有未保存修改，确认关闭？\n（确认后本地草稿也会清除）')) return;
   }
   if (tab.model) tab.model.dispose();
+  clearDraft(path); // 主动关闭清草稿；崩溃不走这里，草稿保留用于恢复
   openTabs.splice(idx, 1);
   if (activePath === path) {
     const next = openTabs[idx] || openTabs[idx - 1] || null;
@@ -186,6 +311,7 @@ function closeTab(path, force) {
       activePath = null;
       if (editor) editor.setModel(emptyModel);
       refreshTabBar();
+      updateWordCount();
     }
   } else {
     refreshTabBar();
@@ -204,8 +330,8 @@ function newFile() {
   const template = "---\n" + 'title: ""\n' + "date: " + ts + "\n" + "tags: []\n" + "---\n\n";
   const model = monaco.editor.createModel(template, "markdown");
   const tab = { path: id, name: "新建文章.md", sha: null, model: model, dirty: true, viewState: null, isNew: true };
-  model.onDidChangeContent(() => setTabDirty(tab, true));
   model.updateOptions({ tabSize: 2 });
+  attachModelListeners(tab);
   openTabs.push(tab);
   switchTab(id);
   refreshTabBar();
@@ -226,14 +352,10 @@ async function saveCurrent() {
   if (!content.trim()) { toast("内容为空", "error"); return; }
 
   const isNew = tab.isNew;
+  const oldPath = tab.path;
   let path, message;
-  if (isNew) {
-    path = "_posts/" + newSlug() + ".md";
-    message = "新建文章";
-  } else {
-    path = tab.path;
-    message = "更新 " + tab.name;
-  }
+  if (isNew) { path = "_posts/" + newSlug() + ".md"; message = "新建文章"; }
+  else { path = tab.path; message = "更新 " + tab.name; }
 
   const btn = $("save-btn");
   btn.disabled = true;
@@ -241,14 +363,14 @@ async function saveCurrent() {
   try {
     const sha = isNew ? undefined : tab.sha;
     const res = await saveFile(path, content, sha, message);
-    const oldPath = tab.path;
     tab.path = path;
     tab.sha = res.content.sha;
     tab.name = path.split("/").pop();
     tab.isNew = false;
     setTabDirty(tab, false);
     if (activePath === oldPath) activePath = path;
-    // 更新缓存
+    clearDraft(oldPath);
+    clearDraft(path);
     const fm = parseFrontmatter(content);
     fileCache.set(path, { path: path, name: tab.name, sha: tab.sha, content: content, title: fm.title, tags: fm.tags });
     refreshTabBar();
@@ -256,8 +378,7 @@ async function saveCurrent() {
     toast("已保存 ✓ 约 1 分钟后网站更新", "success");
   } catch (e) {
     if (e.status === 401) toast("登录已过期，请重新登录", "error");
-    else if (e.status === 409 || e.status === 422)
-      toast(isNew ? "文件名已存在，稍等几秒重试" : "文件已被改动，重新打开后再试", "error");
+    else if (e.status === 409 || e.status === 422) toast(isNew ? "文件名已存在，稍等几秒重试" : "文件已被改动，重新打开后再试", "error");
     else toast("保存失败：" + e.message, "error");
   } finally {
     btn.disabled = false;
@@ -272,10 +393,10 @@ async function removeFile(path, name, sha) {
     toast("已删除 " + name, "success");
     if (findTab(path)) closeTab(path, true);
     fileCache.delete(path);
+    clearDraft(path);
     renderSidebar();
   } catch (e) {
-    if (e.status === 401) toast("登录已过期，请重新登录", "error");
-    else toast("删除失败：" + e.message, "error");
+    toast(e.status === 401 ? "登录已过期，请重新登录" : "删除失败：" + e.message, "error");
   }
 }
 
@@ -289,15 +410,27 @@ function initMonaco() {
       theme: "vs-dark",
       automaticLayout: true,
       minimap: { enabled: true },
-      fontSize: 14,
-      lineNumbers: "on",
-      wordWrap: "on",
-      scrollBeyondLastLine: false,
-      padding: { top: 12 },
-      tabSize: 2,
+      fontSize: 14, lineNumbers: "on", wordWrap: "on",
+      scrollBeyondLastLine: false, padding: { top: 12 }, tabSize: 2,
     });
+    // 保存
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveCurrent);
+    // Markdown 快捷键
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => toggleWrap("**"));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyI, () => toggleWrap("*"));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit1, () => toggleHeading(1));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit2, () => toggleHeading(2));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit3, () => toggleHeading(3));
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, insertLink);
+    // 图片拖拽 / 粘贴
+    const dom = editor.getDomNode();
+    if (dom) {
+      dom.addEventListener("paste", onEditorPaste, true);
+      dom.addEventListener("dragover", onEditorDragOver, true);
+      dom.addEventListener("drop", onEditorDrop, true);
+    }
     refreshTabBar();
+    updateWordCount();
   });
 }
 
@@ -356,18 +489,15 @@ function showContextMenu(x, y, items) {
     btn.addEventListener("click", () => { hideContextMenu(); it.action(); });
     menu.appendChild(btn);
   });
-  // 防溢出屏幕
   menu.classList.remove("hidden");
   const rect = menu.getBoundingClientRect();
-  const left = Math.min(x, window.innerWidth - rect.width - 8);
-  const top = Math.min(y, window.innerHeight - rect.height - 8);
-  menu.style.left = left + "px";
-  menu.style.top = top + "px";
+  menu.style.left = Math.min(x, window.innerWidth - rect.width - 8) + "px";
+  menu.style.top = Math.min(y, window.innerHeight - rect.height - 8) + "px";
 }
 function hideContextMenu() { $("context-menu").classList.add("hidden"); }
 
 // ===== 左栏渲染 =====
-let currentView = "files"; // files | tags
+let currentView = "files";
 let searchQuery = "";
 
 function renderSidebar() {
@@ -378,15 +508,16 @@ function renderSidebar() {
 
 async function renderFileTree() {
   const c = $("sidebar-content");
+  if (!c) return;
   c.innerHTML = '<div class="tree-loading">加载中…</div>';
   try {
-    const results = await Promise.all(DIRS.map((d) => listDir(d.path).catch(() => [])));
+    const results = await Promise.all(DIRS.map((d) => listDir(d.path)));
     c.innerHTML = "";
     DIRS.forEach((d, i) => c.appendChild(buildFileGroup(d.label, results[i])));
     setActiveInTree();
   } catch (e) {
     c.innerHTML = '<div class="tree-loading">加载失败：' + escapeHtml(e.message) + "</div>";
-    if (e.status === 401) toast("登录已过期，请重新登录", "error");
+    if (e.status === 401) toast("登录已过期，请点「登出」后重新登录", "error");
   }
 }
 
@@ -411,10 +542,7 @@ function buildFileGroup(label, files) {
     li.dataset.path = f.path;
     li.dataset.sha = f.sha;
     if (activePath === f.path) li.classList.add("active");
-    li.addEventListener("click", (e) => {
-      if (e.target.classList.contains("del-btn")) return;
-      openFile(f.path);
-    });
+    li.addEventListener("click", (e) => { if (e.target.classList.contains("del-btn")) return; openFile(f.path); });
     const name = document.createElement("span");
     name.className = "fname";
     name.textContent = f.name.replace(/\.md$/, "");
@@ -439,23 +567,12 @@ function setActiveInTree() {
 
 function renderTagsView() {
   const c = $("sidebar-content");
-  if (cacheStatus !== "ready") {
-    c.innerHTML = '<div class="tree-loading">索引中… 正在加载文章内容</div>';
-    return;
-  }
+  if (cacheStatus !== "ready") { c.innerHTML = '<div class="tree-loading">索引中… 正在加载文章内容</div>'; return; }
   const tagMap = new Map();
-  fileCache.forEach((e) => {
-    e.tags.forEach((t) => {
-      if (!tagMap.has(t)) tagMap.set(t, []);
-      tagMap.get(t).push(e);
-    });
-  });
+  fileCache.forEach((e) => { e.tags.forEach((t) => { if (!tagMap.has(t)) tagMap.set(t, []); tagMap.get(t).push(e); }); });
   const tags = Array.from(tagMap.keys()).sort();
   c.innerHTML = "";
-  if (tags.length === 0) {
-    c.innerHTML = '<div class="tree-loading">还没有带标签的文章</div>';
-    return;
-  }
+  if (tags.length === 0) { c.innerHTML = '<div class="tree-loading">还没有带标签的文章</div>'; return; }
   tags.forEach((tag) => {
     const entries = tagMap.get(tag);
     const wrap = document.createElement("div");
@@ -491,24 +608,15 @@ function renderSearchResults(query) {
   wrap.className = "search-results";
   const header = document.createElement("div");
   header.className = "sr-header";
-
-  if (cacheStatus !== "ready") {
-    header.textContent = "索引中… 请稍候再搜";
-    wrap.appendChild(header);
-    c.appendChild(wrap);
-    return;
-  }
-
+  if (cacheStatus !== "ready") { header.textContent = "索引中… 请稍候再搜"; wrap.appendChild(header); c.appendChild(wrap); return; }
   const results = [];
   fileCache.forEach((e) => {
     const inName = e.name.toLowerCase().indexOf(q) >= 0 || (e.title && e.title.toLowerCase().indexOf(q) >= 0);
     const inContent = e.content.toLowerCase().indexOf(q) >= 0;
     if (inName || inContent) results.push({ entry: e, inContent: inContent });
   });
-
   header.textContent = "找到 " + results.length + " 篇";
   wrap.appendChild(header);
-
   results.forEach((r) => {
     const e = r.entry;
     const item = document.createElement("div");
@@ -543,7 +651,6 @@ function highlight(text, q) {
   return escapeHtml(text.substring(0, idx)) + "<mark>" + escapeHtml(text.substring(idx, idx + q.length)) + "</mark>" + escapeHtml(text.substring(idx + q.length));
 }
 
-// ===== 视图/搜索 =====
 function switchView(name) {
   currentView = name;
   $("view-files-btn").classList.toggle("active", name === "files");
@@ -556,10 +663,7 @@ const onSearchInput = debounce(function () {
 }, 150);
 
 // ===== 登录视图 =====
-function showLogin() {
-  $("login-view").classList.remove("hidden");
-  $("app-view").classList.add("hidden");
-}
+function showLogin() { $("login-view").classList.remove("hidden"); $("app-view").classList.add("hidden"); }
 function showApp() {
   $("login-view").classList.add("hidden");
   $("app-view").classList.remove("hidden");
@@ -579,6 +683,7 @@ function logout() {
   localStorage.removeItem(TOKEN_KEY);
   if (editor && emptyModel) editor.setModel(emptyModel);
   refreshTabBar();
+  updateWordCount();
   showLogin();
   toast("已登出");
 }
@@ -595,8 +700,7 @@ function initResizer() {
   resizer.addEventListener("mousedown", (e) => {
     dragging = true; startX = e.clientX; startW = sidebar.offsetWidth;
     resizer.classList.add("dragging");
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize"; document.body.style.userSelect = "none";
     e.preventDefault();
   });
   document.addEventListener("mousemove", (e) => {
@@ -607,13 +711,12 @@ function initResizer() {
     if (!dragging) return;
     dragging = false;
     resizer.classList.remove("dragging");
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    document.body.style.cursor = ""; document.body.style.userSelect = "";
     localStorage.setItem(WIDTH_KEY, String(sidebar.offsetWidth));
   });
 }
 
-// ===== OAuth 握手 =====
+// ===== OAuth =====
 function login() {
   window.addEventListener("message", onAuthMessage);
   window.open(CONFIG.workerUrl + "/auth/github", "github-oauth", "width=640,height=760");
@@ -644,24 +747,18 @@ function init() {
   $("search-input").addEventListener("input", onSearchInput);
   $("view-files-btn").addEventListener("click", () => switchView("files"));
   $("view-tags-btn").addEventListener("click", () => switchView("tags"));
-  // Ctrl+P 聚焦搜索（拦截浏览器打印）
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P") && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       const s = $("search-input");
-      s.focus();
-      s.select();
+      s.focus(); s.select();
     }
   });
-  // 右键菜单外部关闭
   document.addEventListener("click", hideContextMenu);
   document.addEventListener("scroll", hideContextMenu, true);
   if (getToken()) showApp();
   else showLogin();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+else init();

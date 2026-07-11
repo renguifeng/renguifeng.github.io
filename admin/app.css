@@ -171,6 +171,15 @@ mark { background: #6a4c1a; color: #ffe9a8; padding: 0 2px; border-radius: 2px; 
 .tab-bar-empty { padding: 0 14px; color: #6a6a6a; font-size: 12px; display: flex; align-items: center; }
 .editor { flex: 1; min-height: 0; }
 
+/* ---------- 状态栏 ---------- */
+.status-bar {
+  height: 22px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; background: #007acc; color: #fff; font-size: 12px;
+}
+#status-info:empty { display: none; }
+#word-count { opacity: .95; }
+
 /* ---------- 右键菜单 ---------- */
 .context-menu {
   position: fixed; background: #2d2d2d; border: 1px solid #454545; border-radius: 4px;
