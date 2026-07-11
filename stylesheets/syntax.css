@@ -1,0 +1,67 @@
+/* =========================================================
+   代码高亮 — Rouge 生成的 .highlight token 配色
+   GitHub 浅色风格。配合 kramdown 默认输出的结构：
+   <div class="language-xxx highlighter-rouge"><div class="highlight"><pre><code>...
+   ========================================================= */
+
+/* ---------- 代码块容器 ---------- */
+.post-content .highlighter-rouge {
+  margin: 24px 0;
+}
+.post-content .highlighter-rouge .highlight {
+  background: #f6f8fa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.post-content .highlighter-rouge pre {
+  margin: 0;
+  overflow: visible;
+}
+.post-content .highlighter-rouge code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  color: #24292f;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* ---------- token 配色 ---------- */
+.highlight .c, .highlight .cm, .highlight .c1, .highlight .cs { color: #6a737d; font-style: italic; }   /* Comment */
+.highlight .cp { color: #6a737d; font-weight: 600; }                                                      /* Comment.Preproc */
+.highlight .err { color: #cf222e; }                                                                        /* Error */
+.highlight .k, .highlight .kc, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .ow { color: #cf222e; }  /* Keyword */
+.highlight .kt { color: #953800; }                                                                         /* Keyword.Type */
+.highlight .o { color: #0550ae; }                                                                          /* Operator */
+.highlight .p { color: #24292f; }                                                                          /* Punctuation */
+
+.highlight .s, .highlight .sb, .highlight .sc, .highlight .sd,
+.highlight .s2, .highlight .se, .highlight .sh, .highlight .si,
+.highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss,
+.highlight .sa, .highlight .dl { color: #0a3069; }                                                        /* String */
+
+.highlight .m, .highlight .mf, .highlight .mh, .highlight .mi,
+.highlight .mo, .highlight .il { color: #0550ae; }                                                        /* Number */
+
+.highlight .na { color: #0550ae; }                                                                         /* Name.Attribute */
+.highlight .nb, .highlight .bp { color: #6639ba; }                                                         /* Name.Builtin */
+.highlight .nc { color: #953800; }                                                                         /* Name.Class */
+.highlight .no { color: #0550ae; }                                                                         /* Name.Constant */
+.highlight .ni { color: #6639ba; }                                                                         /* Name.Entity */
+.highlight .ne, .highlight .nf, .highlight .fm { color: #8250df; }                                         /* Name.Function / Exception */
+.highlight .nn { color: #6639ba; }                                                                         /* Name.Namespace */
+.highlight .nt { color: #116329; }                                                                         /* Name.Tag */
+.highlight .nv, .highlight .vc, .highlight .vg, .highlight .vi, .highlight .vm { color: #953900; }         /* Name.Variable */
+.highlight .nl { color: #953900; }                                                                         /* Name.Label */
+
+.highlight .l { color: #0550ae; }                                                                          /* Literal */
+
+/* diff / 通用增删 */
+.highlight .gd { color: #82071e; background: #ffebe9; }                                                    /* Generic.Deleted */
+.highlight .gi { color: #116329; background: #dafbe1; }                                                    /* Generic.Inserted */
+.highlight .gu { color: #6e7781; font-weight: 600; }                                                       /* Generic.Heading */
+.highlight .w { color: #6e7781; }                                                                          /* Whitespace */

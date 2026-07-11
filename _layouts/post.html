@@ -1,0 +1,22 @@
+---
+layout: default
+---
+<article class="post" id="top">
+  <header class="post-header container">
+    <h1 class="post-title">{{ page.title | escape }}</h1>
+    <div class="post-meta">
+      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y 年 %-m 月 %-d 日" }}</time>
+      {%- if page.tags.size > 0 -%}
+        <span class="post-tags-inline">
+          {%- for tag in page.tags -%}
+            <a class="chip-sm" href="{{ '/tags/' | relative_url }}#{{ tag }}">{{ tag }}</a>
+          {%- endfor -%}
+        </span>
+      {%- endif -%}
+    </div>
+  </header>
+
+  <div class="post-content container">
+    {{ content }}
+  </div>
+</article>

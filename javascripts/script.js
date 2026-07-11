@@ -11,14 +11,15 @@
     yearEl.textContent = new Date().getFullYear();
   }
 
-  // 导航高亮：滚动到哪个区块，对应的导航项就高亮
+  // 导航高亮：滚动到首页哪个区块，对应的导航项就高亮
+  // 注意：nav 链接形如 "/#about"，用 a.hash 取 "#about" 部分来匹配区块 id
   var navLinks = Array.prototype.slice.call(
     document.querySelectorAll(".nav-links a")
   );
   var sections = navLinks
     .map(function (a) {
-      var id = a.getAttribute("href");
-      return id && id.charAt(0) === "#" ? document.querySelector(id) : null;
+      var hash = a.hash; // 例："#about"（非锚点链接为 ""）
+      return hash ? document.querySelector(hash) : null;
     })
     .filter(Boolean);
 
@@ -35,7 +36,7 @@
 
         var id = "#" + entry.target.id;
         var match = navLinks.filter(function (a) {
-          return a.getAttribute("href") === id;
+          return a.hash === id;
         })[0];
 
         if (!match) return;
@@ -47,7 +48,6 @@
       });
     },
     {
-      // 让“区块顶部进入视口约一半时”视为当前区块
       rootMargin: "-45% 0px -50% 0px",
       threshold: 0
     }

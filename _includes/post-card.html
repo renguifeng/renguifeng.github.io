@@ -1,0 +1,16 @@
+{%- comment -%}
+  单篇文章卡片，供首页「最新文章」与博客列表页复用。
+  依赖传入变量：post
+{%- endcomment -%}
+<article class="card post-card">
+  <a class="post-card-link" href="{{ post.url | relative_url }}">
+    <h3 class="post-card-title">{{ post.title | escape }}</h3>
+    <p class="post-card-meta">
+      <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
+      {%- if post.tags.size > 0 -%}
+        <span class="post-card-tags"> · {{ post.tags | join: " / " }}</span>
+      {%- endif -%}
+    </p>
+    <p class="post-card-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
+  </a>
+</article>

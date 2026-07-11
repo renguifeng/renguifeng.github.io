@@ -1,186 +1,171 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Renguifeng · 个人主页</title>
-  <meta name="description" content="Renguifeng 的个人主页与作品集 — 全栈开发者，喜欢把想法做成产品。">
+---
+layout: default
+description: "Renguifeng 的个人主页与作品集 — 全栈开发者。"
+---
 
-  <link rel="stylesheet" href="stylesheets/stylesheet.css">
-</head>
-<body>
+<main id="top">
 
-  <!-- 顶部导航 -->
-  <header class="nav">
-    <div class="container nav-inner">
-      <a href="#top" class="brand">Renguifeng</a>
-      <nav class="nav-links" aria-label="主导航">
-        <a href="#about">关于</a>
-        <a href="#skills">技能</a>
-        <a href="#projects">作品</a>
-        <a href="#contact" class="nav-cta">联系我</a>
-      </nav>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <p class="hero-eyebrow">👋 你好，欢迎来到我的小站</p>
+      <h1 class="hero-title">
+        我是 <span class="accent">Renguifeng</span><br>
+        喜欢把想法做成产品
+      </h1>
+      <p class="hero-sub">
+        全栈开发者。专注于 Web 开发与开发者工具，享受从一行代码到一个完整产品的全过程。
+      </p>
+      <div class="hero-actions">
+        <a href="#projects" class="btn btn-primary">查看作品</a>
+        <a href="#writing" class="btn btn-ghost">读读文章</a>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <main id="top">
-
-    <!-- Hero -->
-    <section class="hero">
-      <div class="container hero-inner">
-        <p class="hero-eyebrow">👋 你好，欢迎来到我的小站</p>
-        <h1 class="hero-title">
-          我是 <span class="accent">Renguifeng</span><br>
-          喜欢把想法做成产品
-        </h1>
-        <p class="hero-sub">
-          全栈开发者。专注于 Web 开发与开发者工具，享受从一行代码到一个完整产品的全过程。
+  <!-- 关于 -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2 class="section-title">关于我</h2>
+      <div class="card about-card">
+        <p>
+          我是一名全栈开发者，平时喜欢折腾新技术、写点小工具，也乐于把学到的东西整理成文章分享出来。
+          相信好的产品来自对细节的打磨和对用户需求的真正理解。
         </p>
-        <div class="hero-actions">
-          <a href="#projects" class="btn btn-primary">查看作品</a>
-          <a href="#contact" class="btn btn-ghost">联系我</a>
-        </div>
+        <p>
+          工作之余，我喜欢阅读、跑步，以及在 GitHub 上参与开源项目。如果你有有趣的想法，欢迎随时和我聊聊。
+        </p>
       </div>
-    </section>
-
-    <!-- 关于 -->
-    <section id="about" class="section">
-      <div class="container">
-        <h2 class="section-title">关于我</h2>
-        <div class="card about-card">
-          <p>
-            我是一名全栈开发者，平时喜欢折腾新技术、写点小工具，也乐于把学到的东西整理成文章分享出来。
-            相信好的产品来自对细节的打磨和对用户需求的真正理解。
-          </p>
-          <p>
-            工作之余，我喜欢阅读、跑步，以及在 GitHub 上参与开源项目。如果你有有趣的想法，欢迎随时和我聊聊。
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 技能 -->
-    <section id="skills" class="section section-alt">
-      <div class="container">
-        <h2 class="section-title">技能栈</h2>
-        <p class="section-desc">这些是我日常使用得最多的技术：</p>
-        <ul class="chips">
-          <li>JavaScript</li>
-          <li>TypeScript</li>
-          <li>Python</li>
-          <li>HTML / CSS</li>
-          <li>React</li>
-          <li>Node.js</li>
-          <li>Git</li>
-          <li>Linux</li>
-          <li>Docker</li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- 作品集 -->
-    <section id="projects" class="section">
-      <div class="container">
-        <h2 class="section-title">作品集</h2>
-        <p class="section-desc">一些我做过的项目和练手作品：</p>
-        <div class="project-grid">
-
-          <article class="card project-card">
-            <div class="project-top">
-              <h3 class="project-name">项目一</h3>
-              <span class="project-tag">Web App</span>
-            </div>
-            <p class="project-desc">
-              一个在线协作笔记应用，支持实时同步与 Markdown 编辑。（占位描述，请替换为真实项目）
-            </p>
-            <div class="chips small">
-              <li>React</li>
-              <li>Node.js</li>
-              <li>WebSocket</li>
-            </div>
-            <a href="#" class="project-link">查看详情 →</a>
-          </article>
-
-          <article class="card project-card">
-            <div class="project-top">
-              <h3 class="project-name">项目二</h3>
-              <span class="project-tag">CLI 工具</span>
-            </div>
-            <p class="project-desc">
-              命令行效率工具，帮助快速管理本地开发环境与常用任务。（占位描述）
-            </p>
-            <div class="chips small">
-              <li>Python</li>
-              <li>Click</li>
-            </div>
-            <a href="#" class="project-link">查看详情 →</a>
-          </article>
-
-          <article class="card project-card">
-            <div class="project-top">
-              <h3 class="project-name">项目三</h3>
-              <span class="project-tag">开源库</span>
-            </div>
-            <p class="project-desc">
-              一个轻量的前端组件库，专注于简洁与可访问性。（占位描述）
-            </p>
-            <div class="chips small">
-              <li>TypeScript</li>
-              <li>Vite</li>
-            </div>
-            <a href="#" class="project-link">查看详情 →</a>
-          </article>
-
-          <article class="card project-card">
-            <div class="project-top">
-              <h3 class="project-name">项目四</h3>
-              <span class="project-tag">数据可视化</span>
-            </div>
-            <p class="project-desc">
-              基于公开数据的可视化看板，展示某个领域的趋势变化。（占位描述）
-            </p>
-            <div class="chips small">
-              <li>D3.js</li>
-              <li>Python</li>
-            </div>
-            <a href="#" class="project-link">查看详情 →</a>
-          </article>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- 联系 -->
-    <section id="contact" class="section section-alt">
-      <div class="container contact-inner">
-        <h2 class="section-title">保持联系</h2>
-        <p class="section-desc">有合作、交流或随便聊聊的想法？欢迎通过下面任意方式找到我。</p>
-        <div class="contact-links">
-          <a href="https://github.com/renguifeng" target="_blank" rel="noopener" class="contact-item">
-            <span class="contact-label">GitHub</span>
-            <span class="contact-value">@renguifeng →</span>
-          </a>
-          <a href="mailto:mailtoguifeng@gmail.com" class="contact-item">
-            <span class="contact-label">Email</span>
-            <span class="contact-value">mailtoguifeng@gmail.com →</span>
-          </a>
-          <a href="#" class="contact-item">
-            <span class="contact-label">博客</span>
-            <span class="contact-value">敬请期待 →</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- 页脚 -->
-  <footer class="footer">
-    <div class="container footer-inner">
-      <p>© <span id="year">2026</span> Renguifeng · 用 ❤️ 与纯 HTML/CSS 搭建</p>
     </div>
-  </footer>
+  </section>
 
-  <script src="javascripts/script.js"></script>
-</body>
-</html>
+  <!-- 技能 -->
+  <section id="skills" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">技能栈</h2>
+      <p class="section-desc">这些是我日常使用得最多的技术：</p>
+      <ul class="chips">
+        <li>JavaScript</li>
+        <li>TypeScript</li>
+        <li>Python</li>
+        <li>HTML / CSS</li>
+        <li>React</li>
+        <li>Node.js</li>
+        <li>Git</li>
+        <li>Linux</li>
+        <li>Docker</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 作品集 -->
+  <section id="projects" class="section">
+    <div class="container">
+      <h2 class="section-title">作品集</h2>
+      <p class="section-desc">一些我做过的项目和练手作品：</p>
+      <div class="project-grid">
+
+        <article class="card project-card">
+          <div class="project-top">
+            <h3 class="project-name">项目一</h3>
+            <span class="project-tag">Web App</span>
+          </div>
+          <p class="project-desc">
+            一个在线协作笔记应用，支持实时同步与 Markdown 编辑。（占位描述，请替换为真实项目）
+          </p>
+          <div class="chips small">
+            <li>React</li>
+            <li>Node.js</li>
+            <li>WebSocket</li>
+          </div>
+          <a href="#" class="project-link">查看详情 →</a>
+        </article>
+
+        <article class="card project-card">
+          <div class="project-top">
+            <h3 class="project-name">项目二</h3>
+            <span class="project-tag">CLI 工具</span>
+          </div>
+          <p class="project-desc">
+            命令行效率工具，帮助快速管理本地开发环境与常用任务。（占位描述）
+          </p>
+          <div class="chips small">
+            <li>Python</li>
+            <li>Click</li>
+          </div>
+          <a href="#" class="project-link">查看详情 →</a>
+        </article>
+
+        <article class="card project-card">
+          <div class="project-top">
+            <h3 class="project-name">项目三</h3>
+            <span class="project-tag">开源库</span>
+          </div>
+          <p class="project-desc">
+            一个轻量的前端组件库，专注于简洁与可访问性。（占位描述）
+          </p>
+          <div class="chips small">
+            <li>TypeScript</li>
+            <li>Vite</li>
+          </div>
+          <a href="#" class="project-link">查看详情 →</a>
+        </article>
+
+        <article class="card project-card">
+          <div class="project-top">
+            <h3 class="project-name">项目四</h3>
+            <span class="project-tag">数据可视化</span>
+          </div>
+          <p class="project-desc">
+            基于公开数据的可视化看板，展示某个领域的趋势变化。（占位描述）
+          </p>
+          <div class="chips small">
+            <li>D3.js</li>
+            <li>Python</li>
+          </div>
+          <a href="#" class="project-link">查看详情 →</a>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 最新文章 -->
+  <section id="writing" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">最新文章</h2>
+      <p class="section-desc">我写的一些技术笔记与想法。</p>
+      <div class="post-card-grid">
+        {% for post in site.posts limit: 3 %}
+          {% include post-card.html post=post %}
+        {% else %}
+          <p class="muted">还没有文章，敬请期待。</p>
+        {% endfor %}
+      </div>
+      <p class="section-more"><a href="{{ '/blog/' | relative_url }}">查看全部文章 →</a></p>
+    </div>
+  </section>
+
+  <!-- 联系 -->
+  <section id="contact" class="section">
+    <div class="container contact-inner">
+      <h2 class="section-title">保持联系</h2>
+      <p class="section-desc">有合作、交流或随便聊聊的想法？欢迎通过下面任意方式找到我。</p>
+      <div class="contact-links">
+        <a href="https://github.com/renguifeng" target="_blank" rel="noopener" class="contact-item">
+          <span class="contact-label">GitHub</span>
+          <span class="contact-value">@renguifeng →</span>
+        </a>
+        <a href="mailto:mailtoguifeng@gmail.com" class="contact-item">
+          <span class="contact-label">Email</span>
+          <span class="contact-value">mailtoguifeng@gmail.com →</span>
+        </a>
+        <a href="{{ '/feed.xml' | relative_url }}" class="contact-item">
+          <span class="contact-label">RSS</span>
+          <span class="contact-value">订阅本站 →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>

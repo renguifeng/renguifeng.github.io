@@ -1,0 +1,48 @@
+---
+layout: default
+title: "标签"
+description: "按标签浏览所有文章。"
+---
+
+<section class="section section-top" id="top">
+  <div class="container">
+    <h1 class="page-title">标签</h1>
+    <p class="section-desc">按标签浏览所有文章。</p>
+
+    {% assign all_tags = site.tags | sort %}
+
+    {% if all_tags.size == 0 %}
+      <p class="muted">还没有带标签的文章。</p>
+    {% else %}
+
+      <!-- 标签云：快速跳转 -->
+      <div class="chips tag-cloud">
+        {% for tag in all_tags %}
+          <a class="chip-link" href="#{{ tag[0] }}">
+            {{ tag[0] }} <span class="tag-count">{{ tag[1].size }}</span>
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- 每个标签的文章列表 -->
+      <div class="tag-groups">
+        {% for tag in all_tags %}
+          <section class="tag-group card" id="{{ tag[0] }}">
+            <h2 class="tag-group-title">
+              {{ tag[0] }} <span class="tag-count">{{ tag[1].size }}</span>
+            </h2>
+            <ul class="tag-post-list">
+              {% for post in tag[1] %}
+                <li>
+                  <a href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+                  <span class="tag-post-date">{{ post.date | date: "%Y-%m-%d" }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endfor %}
+      </div>
+
+    {% endif %}
+  </div>
+</section>

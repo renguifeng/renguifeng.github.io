@@ -1,0 +1,58 @@
+# ============================================================
+#  Jekyll 配置 — renguifeng.github.io
+#  GitHub Pages 原生构建，仅用白名单插件，零额外服务。
+# ============================================================
+
+# ---------- 站点信息 ----------
+title: Renguifeng
+description: "Renguifeng 的个人主页与博客 — 全栈开发者，记录技术与生活。"
+author: Renguifeng
+url: "https://renguifeng.github.io"
+lang: zh-CN
+
+# ---------- 构建与 Markdown ----------
+markdown: kramdown
+highlighter: rouge
+permalink: /blog/:year/:month/:day/:title/
+
+# kramdown：启用 GFM 风格 fenced code block，用 Rouge 着色
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: "highlight"
+    span_class: ""
+    block_class: ""
+
+# ---------- 分页（作用于 blog/index.html） ----------
+paginate: 5
+paginate_path: "/blog/page:num/"
+
+# ---------- 白名单插件 ----------
+plugins:
+  - jekyll-feed        # 自动生成 /feed.xml (RSS)
+  - jekyll-seo-tag     # 自动注入 SEO meta 标签
+  - jekyll-sitemap     # 自动生成 /sitemap.xml
+  - jekyll-paginate    # 文章列表分页
+
+# ---------- 默认布局 ----------
+defaults:
+  - scope:
+      path: ""         # 所有 posts
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""         # 所有 pages
+      type: "pages"
+    values:
+      layout: "default"
+
+# ---------- 排除（不参与构建） ----------
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - node_modules
+  - vendor
+  - .git
