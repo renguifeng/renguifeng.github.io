@@ -1,8 +1,8 @@
 /* ============================================================
    编辑器后台 · 应用逻辑
    - OAuth 握手（复用 Cloudflare Worker）
-   - GitHub Contents API 读写文件（整文件编辑）
-   - Monaco 编辑器 + 可拖拽侧边栏 + Ctrl+S 保存
+   - GitHub Contents API：列 / 读 / 改 / 删 文件
+   - Monaco 编辑器 + 可拖拽侧边栏 + Ctrl+S + 未保存标记
    ============================================================ */
 
 // ===== 配置（改仓库时改这里）=====
@@ -94,9 +94,16 @@ async function saveFile(path, content, sha, message) {
   return gh(path, "PUT", body);
 }
 
+async function deleteFile(path, sha, message) {
+  return gh(path, "DELETE", { message: message, sha: sha, branch: CONFIG.branch });
+}
+
 // ===== 状态 =====
 let editor = null;
 let currentFile = null; // { path, sha, name } 或 null（新建未保存）
+let dirty = false;      // 编辑器是否有未保存改动
+let tabName = "未打开文件";
+let suppressDirty = false; // 加载内容时临时关闭 dirty 标记
 
 // ===== Monaco =====
 function initMonaco() {
@@ -107,7 +114,7 @@ function initMonaco() {
       language: "markdown",
       theme: "vs-dark",
       automaticLayout: true,
-      minimap: { enabled: true }, // VSCode 风小地图
+      minimap: { enabled: true },
       fontSize: 14,
       lineNumbers: "on",
       wordWrap: "on",
@@ -115,9 +122,31 @@ function initMonaco() {
       padding: { top: 12 },
       tabSize: 2,
     });
+    editor.onDidChangeModelContent(function () {
+      if (!suppressDirty) setDirty(true);
+    });
     // Ctrl+S / Cmd+S 保存
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveCurrent);
   });
+}
+
+// ===== tab + dirty =====
+function setDirty(d) {
+  dirty = d;
+  refreshTab();
+}
+function setTabName(name) {
+  tabName = name || "未打开文件";
+  refreshTab();
+}
+function refreshTab() {
+  $("active-tab").querySelector(".tab-name").textContent = (dirty ? "● " : "") + tabName;
+}
+
+// 切换/新建/打开前检查未保存
+function confirmDiscard() {
+  if (!dirty) return true;
+  return window.confirm("当前文件有未保存的修改，放弃并切换？");
 }
 
 // ===== UI =====
@@ -167,9 +196,25 @@ function buildGroup(label, files) {
   }
   files.forEach((f) => {
     const li = document.createElement("li");
-    li.textContent = f.name.replace(/\.md$/, "");
     li.dataset.path = f.path;
-    li.addEventListener("click", () => openFile(f.path));
+    li.dataset.sha = f.sha;
+    li.addEventListener("click", (e) => {
+      if (e.target.classList.contains("del-btn")) return; // 点删除不触发打开
+      openFile(f.path);
+    });
+    const name = document.createElement("span");
+    name.className = "fname";
+    name.textContent = f.name.replace(/\.md$/, "");
+    li.appendChild(name);
+    const del = document.createElement("button");
+    del.className = "del-btn";
+    del.title = "删除";
+    del.textContent = "×";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeFile(f.path, f.name, f.sha);
+    });
+    li.appendChild(del);
     ul.appendChild(li);
   });
   wrap.appendChild(ul);
@@ -184,12 +229,16 @@ function setActiveInTree() {
 }
 
 async function openFile(path) {
+  if (!confirmDiscard()) return;
   try {
     const f = await getFile(path);
     if (!f) return;
     currentFile = { path: f.path, sha: f.sha, name: f.path.split("/").pop() };
+    suppressDirty = true;
     editor.setValue(f.content);
-    setTab(currentFile.name);
+    suppressDirty = false;
+    setDirty(false);
+    setTabName(currentFile.name);
     setActiveInTree();
   } catch (e) {
     toast("打开失败：" + e.message, "error");
@@ -197,6 +246,7 @@ async function openFile(path) {
 }
 
 function newFile() {
+  if (!confirmDiscard()) return;
   const now = new Date();
   const ts =
     now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " +
@@ -208,18 +258,41 @@ function newFile() {
     "tags: []\n" +
     "---\n\n";
   currentFile = null;
+  suppressDirty = true;
   editor.setValue(template);
-  setTab("新建文章.md");
+  suppressDirty = false;
+  setDirty(true); // 预填模板视为未保存，切走会提醒
+  setTabName("新建文章.md");
   setActiveInTree();
   editor.focus();
-  // 光标放到 title 的引号之间（第 2 行第 9 列）
   editor.setPosition({ lineNumber: 2, column: 9 });
 }
 
 function newSlug() {
+  // 精确到秒，避免短时间新建重名
   const now = new Date();
   return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
-    "-" + pad(now.getHours()) + pad(now.getMinutes());
+    "-" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+}
+
+async function removeFile(path, name, sha) {
+  if (!window.confirm('确认删除 "' + name + '"？\n\n此操作不可撤销，文件会从仓库移除。')) return;
+  try {
+    await deleteFile(path, sha, "删除 " + name);
+    toast("已删除 " + name, "success");
+    if (currentFile && currentFile.path === path) {
+      currentFile = null;
+      suppressDirty = true;
+      editor.setValue("");
+      suppressDirty = false;
+      setDirty(false);
+      setTabName("未打开文件");
+    }
+    refreshTree();
+  } catch (e) {
+    if (e.status === 401) toast("登录已过期，请重新登录", "error");
+    else toast("删除失败：" + e.message, "error");
+  }
 }
 
 async function saveCurrent() {
@@ -230,12 +303,12 @@ async function saveCurrent() {
     return;
   }
 
+  const isNew = !currentFile;
   let path, message;
   if (currentFile) {
     path = currentFile.path;
     message = "更新 " + currentFile.name;
   } else {
-    // 新建：默认进 _posts，时间戳命名
     path = "_posts/" + newSlug() + ".md";
     message = "新建文章";
   }
@@ -247,14 +320,16 @@ async function saveCurrent() {
     const sha = currentFile ? currentFile.sha : undefined;
     const res = await saveFile(path, content, sha, message);
     currentFile = { path: path, sha: res.content.sha, name: path.split("/").pop() };
-    setTab(currentFile.name);
+    setTabName(currentFile.name);
+    setDirty(false);
     toast("已保存 ✓ 约 1 分钟后网站更新", "success");
     refreshTree();
   } catch (e) {
-    if (e.status === 409 || e.status === 422) {
-      toast("文件已变化，重新打开后再试", "error");
-    } else if (e.status === 401) {
+    if (e.status === 401) {
       toast("登录已过期，请重新登录", "error");
+    } else if (e.status === 409 || e.status === 422) {
+      // 区分新建冲突 vs 更新冲突
+      toast(isNew ? "文件名已存在，稍等几秒重试" : "文件已被改动，重新打开后再试", "error");
     } else {
       toast("保存失败：" + e.message, "error");
     }
@@ -264,13 +339,16 @@ async function saveCurrent() {
   }
 }
 
-function setTab(name) {
-  $("active-tab").querySelector(".tab-name").textContent = name || "未打开文件";
-}
-
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
   currentFile = null;
+  if (editor) {
+    suppressDirty = true;
+    editor.setValue("");
+    suppressDirty = false;
+  }
+  setDirty(false);
+  setTabName("未打开文件");
   showLogin();
   toast("已登出");
 }
@@ -282,7 +360,6 @@ function initResizer() {
   const resizer = $("resizer");
   const sidebar = $("sidebar");
 
-  // 恢复上次宽度
   const saved = parseInt(localStorage.getItem(WIDTH_KEY), 10);
   if (saved && saved >= 140 && saved <= 600) sidebar.style.width = saved + "px";
 
@@ -323,7 +400,7 @@ function login() {
 function onAuthMessage(e) {
   const d = e.data;
   if (d === "authorizing:github") {
-    e.source.postMessage("login", e.origin); // 触发 Worker 发 token
+    e.source.postMessage("login", e.origin);
     return;
   }
   if (typeof d === "string" && d.indexOf("authorization:github:success:") === 0) {

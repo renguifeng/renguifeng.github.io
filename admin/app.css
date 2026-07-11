@@ -111,17 +111,38 @@ body {
 .tree-group.collapsed .tree-files { display: none; }
 .tree-files { list-style: none; margin: 0; padding: 0; }
 .tree-files li {
-  padding: 4px 12px 4px 26px;
+  display: flex;
+  align-items: center;
+  padding: 4px 4px 4px 26px;
   font-size: 13px;
   color: #c8c8c8;
   cursor: pointer;
+}
+.tree-files li .fname {
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.tree-files li .del-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: #9a9a9a;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-left: 4px;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 3px;
+  font-family: inherit;
+  transition: opacity .1s, color .1s, background .1s;
+}
+.tree-files li:hover .del-btn { opacity: 1; }
+.tree-files li .del-btn:hover { color: #f48771; background: rgba(244, 135, 113, .12); }
 .tree-files li:hover { background: #2a2d2e; }
 .tree-files li.active { background: #37373d; color: #fff; }
-.tree-files li.muted { color: #6a6a6a; cursor: default; font-style: italic; }
+.tree-files li.muted { color: #6a6a6a; cursor: default; font-style: italic; padding-left: 26px; }
 .tree-files li.muted:hover { background: transparent; }
 .tree-loading { padding: 8px 16px; font-size: 12px; color: #6a6a6a; }
 
