@@ -1,29 +1,76 @@
 # Renguifeng.GitHub.io
 
-基于 **Jekyll** 的个人主页 + 博客，托管在 GitHub Pages。
-发文 = 在 `_posts/` 目录新增一个 Markdown 文件，提交即自动发布。无需本地安装任何东西。
+基于 **Jekyll** 的个人主页 + 博客，托管在 GitHub Pages。两种发文方式：
 
-访问：<https://renguifeng.github.io>
+- 🟢 **写作后台 `/admin`**（推荐，不碰代码）：像公众号那样写完点发布。首次需一次性配置，见下方「📝 写作后台」。
+- ⚪ **手动**（备选）：在 GitHub 网页加 Markdown 文件，见下方「✍️ 手动发文」。
+
+站点：<https://renguifeng.github.io>　·　后台：<https://renguifeng.github.io/admin>
 
 ---
 
 ## 📁 目录结构
 
 ```
-_posts/        文章（发布区）。文件名必须是 YYYY-MM-DD-标题.md
-_drafts/       草稿（不发布）。写好后移到 _posts/ 并加日期前缀即可发布
-_layouts/      页面模板（default / post）
-_includes/     可复用片段（导航 / 页脚 / 文章卡片）
-blog/          博客列表页（带分页，每页 5 篇）
-tags/          标签索引页（自动按标签分组）
-index.html     首页（个人主页 + 最新文章）
-stylesheets/   样式（stylesheet.css 主样式 + syntax.css 代码高亮）
-_config.yml    Jekyll 配置
+_posts/           文章（发布区）。文件名必须是 YYYY-MM-DD-标题.md
+_drafts/          草稿（不发布）。写好后移到 _posts/ 并加日期前缀即可发布
+_layouts/         页面模板（default / post / none）
+_includes/        可复用片段（导航 / 页脚 / 文章卡片）
+blog/             博客列表页（带分页，每页 5 篇）
+tags/             标签索引页（自动按标签分组）
+index.html        首页（个人主页 + 最新文章）
+admin/            内容管理后台（Decap CMS，访问 /admin）
+oauth-provider/   OAuth 中转 Worker 源码（部署到 Cloudflare）
+stylesheets/      样式（stylesheet.css 主样式 + syntax.css 代码高亮）
+_config.yml       Jekyll 配置
 ```
 
 ---
 
-## ✍️ 怎么发新文章（在 GitHub 网页操作，推荐）
+## 📝 写作后台 `/admin`（推荐 —— 不碰代码）
+
+配好之后，打开 `renguifeng.github.io/admin`，用 GitHub 登录，在图形界面里写文章、上传图片、点发布——**全程不碰代码 / git / 文件名**。
+
+### 📦 一次性配置（约 15 分钟，只做一次）
+
+**第 1 步：部署 OAuth 中转（Cloudflare Worker，免费）**
+1. 注册/登录 <https://dash.cloudflare.com>
+2. 左侧 **Workers & Pages** → **Create** → **Worker** → 取个名字（如 `blog-oauth`）→ **Deploy**
+3. 点 **Edit code**，把仓库里 [`oauth-provider/worker.js`](oauth-provider/worker.js) 的**全部内容**粘贴进去 → **Save and Deploy**
+4. 记下 Worker 的 URL（形如 `https://blog-oauth.你的名字.workers.dev`）
+
+**第 2 步：建 GitHub OAuth App**
+1. 打开 <https://github.com/settings/developers> → **New OAuth App**
+   - Application name：`博客后台`（随意）
+   - Homepage URL：`https://renguifeng.github.io`
+   - Authorization callback URL：`https://<第 1 步的 Worker URL>/cb`
+2. 复制 **Client ID**
+3. 点 **Generate a new client secret** → 复制 **Client Secret**（⚠️ 只显示一次）
+
+**第 3 步：给 Worker 填环境变量**
+1. 回 Cloudflare → 进入该 Worker → **Settings** → **Variables**
+2. 添加两条：
+   - `GH_CLIENT_ID` = 第 2 步的 Client ID
+   - `GH_CLIENT_SECRET` = 第 2 步的 Client Secret
+3. **Save**
+
+**第 4 步：让 Claude 接上**
+把第 1 步的 **Worker URL** 发给我（在本对话里贴出来即可），我帮你把 `admin/config.yml` 里的 `https://YOUR-WORKER.workers.dev` 替换成你的 URL 并提交。
+
+完成后访问 <https://renguifeng.github.io/admin> → GitHub 登录授权 → 进入编辑器。
+
+> 🔒 **Client Secret 只存在 Cloudflare Worker 里，永远不进代码仓库。** `admin/config.yml` 里只有公开的 Worker URL，可以放心提交。
+
+### ✍️ 日常发文
+
+1. 打开 <https://renguifeng.github.io/admin>
+2. 用 GitHub 登录
+3. 「文章」→ **New 文章** → 填标题、标签、摘要、写正文（Markdown 编辑器）、可拖拽上传图片
+4. 点 **Publish / 发布** → 约 1 分钟后 <https://renguifeng.github.io/blog/> 就能看到
+
+---
+
+## ✍️ 手动发新文章（GitHub 网页，备选）
 
 1. 打开 <https://github.com/renguifeng/renguifeng.github.io/tree/master/_posts>
 2. 点右上角 **Add file → Create new file**
