@@ -6,7 +6,7 @@ layout: none
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>写作后台 · Renguifeng</title>
+  <title>编辑器 · Renguifeng</title>
   <link rel="stylesheet" href="app.css">
   <link rel="stylesheet" data-name="vs/editor/editor.main"
         href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/editor/editor.main.css">
@@ -16,18 +16,18 @@ layout: none
   <!-- 登录页 -->
   <div id="login-view" class="view">
     <div class="login-card">
-      <div class="login-logo">✎</div>
-      <h1>写作后台</h1>
-      <p>用 GitHub 登录后开始写作。</p>
+      <div class="login-logo">📄</div>
+      <h1>编辑器</h1>
+      <p>用 GitHub 登录后编辑你的文章。</p>
       <button id="login-btn" class="btn-primary">用 GitHub 登录</button>
       <p class="login-hint">登录会跳到 GitHub 授权，授权后自动返回。</p>
     </div>
   </div>
 
-  <!-- 主编辑界面 -->
+  <!-- 主界面：左文件列表 / 右编辑器 -->
   <div id="app-view" class="view hidden">
     <header class="topbar">
-      <div class="brand">Renguifeng · 写作后台</div>
+      <div class="brand">Renguifeng · 编辑器</div>
       <div class="topbar-actions">
         <button id="new-btn" class="btn-ghost">+ 新建</button>
         <button id="save-btn" class="btn-primary">保存</button>
@@ -36,25 +36,23 @@ layout: none
     </header>
 
     <div class="main">
-      <!-- 侧边栏：文章列表 -->
-      <aside class="sidebar">
-        <div class="sidebar-header">文章</div>
-        <ul id="post-list" class="post-list"></ul>
+      <!-- 文件列表 -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">资源管理器</div>
+        <div class="tree" id="file-tree"></div>
       </aside>
 
-      <!-- 编辑区 -->
+      <!-- 可拖拽分隔线 -->
+      <div class="resizer" id="resizer" title="拖拽调整宽度"></div>
+
+      <!-- 编辑器 -->
       <section class="editor-pane">
-        <div class="meta-bar">
-          <input id="title-input" class="meta-input" placeholder="文章标题" autocomplete="off" />
-          <input id="tags-input" class="meta-input meta-tags" placeholder="标签，逗号分隔" autocomplete="off" />
+        <div class="tab-bar">
+          <div class="tab active" id="active-tab">
+            <span class="tab-name">未打开文件</span>
+          </div>
         </div>
         <div id="editor" class="editor"></div>
-      </section>
-
-      <!-- 预览区 -->
-      <section class="preview-pane">
-        <div class="preview-header">预览</div>
-        <article id="preview" class="preview"></article>
       </section>
     </div>
   </div>
@@ -62,10 +60,8 @@ layout: none
   <!-- 提示条 -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Monaco AMD loader -->
+  <!-- Monaco AMD loader（不再需要 marked，无预览） -->
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
-  <!-- Markdown 解析 -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <!-- 应用逻辑 -->
   <script src="app.js"></script>
 </body>

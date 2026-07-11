@@ -1,8 +1,8 @@
 /* ============================================================
-   写作后台 · 应用逻辑
-   - OAuth 握手（复用已部署的 Cloudflare Worker）
-   - GitHub Contents API 读写 _posts
-   - Monaco 编辑器 + marked 实时预览
+   编辑器后台 · 应用逻辑
+   - OAuth 握手（复用 Cloudflare Worker）
+   - GitHub Contents API 读写文件（整文件编辑）
+   - Monaco 编辑器 + 可拖拽侧边栏 + Ctrl+S 保存
    ============================================================ */
 
 // ===== 配置（改仓库时改这里）=====
@@ -10,11 +10,16 @@ const CONFIG = {
   owner: "renguifeng",
   repo: "renguifeng.github.io",
   branch: "master",
-  postsDir: "_posts",
   workerUrl: "https://soft-thunder-ce76.mailtoguifeng.workers.dev",
 };
+// 左侧文件列表显示哪些目录
+const DIRS = [
+  { path: "_posts",  label: "_posts · 文章" },
+  { path: "_drafts", label: "_drafts · 草稿" },
+];
 const API = "https://api.github.com";
 const TOKEN_KEY = "gh_editor_token";
+const WIDTH_KEY = "editor_sidebar_width";
 const MONACO_CDN = "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs";
 
 // ===== 工具 =====
@@ -26,13 +31,6 @@ function b64encode(str) {
 }
 function b64decode(b64) {
   return decodeURIComponent(escape(atob((b64 || "").replace(/\n/g, ""))));
-}
-function debounce(fn, ms) {
-  let t;
-  return function (...args) {
-    clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), ms);
-  };
 }
 function pad(n) {
   return String(n).padStart(2, "0");
@@ -76,70 +74,31 @@ async function gh(path, method, body) {
   return res.json();
 }
 
-async function listPosts() {
-  const data = await gh(CONFIG.postsDir);
+async function listDir(dir) {
+  const data = await gh(dir);
   if (!Array.isArray(data)) return [];
   return data
     .filter((f) => f.type === "file" && f.name.endsWith(".md"))
-    .sort((a, b) => b.name.localeCompare(a.name)); // 文件名降序 = 日期新的在前
+    .sort((a, b) => b.name.localeCompare(a.name));
 }
 
-async function getPost(path) {
+async function getFile(path) {
   const data = await gh(path);
   if (!data || data.type !== "file") return null;
   return { path: data.path, sha: data.sha, content: b64decode(data.content) };
 }
 
-async function savePost(path, content, sha, message) {
-  const body = {
-    message: message,
-    content: b64encode(content),
-    branch: CONFIG.branch,
-  };
+async function saveFile(path, content, sha, message) {
+  const body = { message: message, content: b64encode(content), branch: CONFIG.branch };
   if (sha) body.sha = sha;
   return gh(path, "PUT", body);
 }
 
-// ===== frontmatter 解析 / 生成 =====
-function parsePost(raw) {
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-  if (!m) return { title: "", tags: [], body: raw };
-  const fm = m[1];
-  const body = m[2];
-  const title = (fm.match(/^title:\s*"?(.*?)"?\s*$/m) || [])[1] || "";
-  const tagsLine = (fm.match(/^tags:\s*\[(.*)\]/m) || [])[1] || "";
-  const tags = tagsLine
-    .split(",")
-    .map((s) => s.trim().replace(/^["']|["']$/g, ""))
-    .filter(Boolean);
-  return { title: title, tags: tags, body: body };
-}
-
-function buildPost(title, tags, body) {
-  const now = new Date();
-  const ts =
-    now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " +
-    pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds()) + " +0800";
-  const lines = ["---", 'title: "' + (title || "无标题").replace(/"/g, '\\"') + '"', "date: " + ts];
-  if (tags && tags.length) lines.push("tags: [" + tags.join(", ") + "]");
-  lines.push("---", "");
-  return lines.join("\n") + body;
-}
-
-function newSlug() {
-  // MVP：用时间戳命名，避开中文/拼音转换，文件名规范且唯一
-  const now = new Date();
-  return (
-    now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + "-" +
-    pad(now.getHours()) + pad(now.getMinutes())
-  );
-}
-
 // ===== 状态 =====
 let editor = null;
-let currentPost = null; // { path, sha } 或 null（新建）
+let currentFile = null; // { path, sha, name } 或 null（新建未保存）
 
-// ===== Monaco + 预览 =====
+// ===== Monaco =====
 function initMonaco() {
   require.config({ paths: { vs: MONACO_CDN } });
   require(["vs/editor/editor.main"], function () {
@@ -148,24 +107,17 @@ function initMonaco() {
       language: "markdown",
       theme: "vs-dark",
       automaticLayout: true,
-      minimap: { enabled: false },
+      minimap: { enabled: true }, // VSCode 风小地图
       fontSize: 14,
       lineNumbers: "on",
       wordWrap: "on",
       scrollBeyondLastLine: false,
       padding: { top: 12 },
+      tabSize: 2,
     });
-    editor.onDidChangeModelContent(debounce(updatePreview, 200));
-    updatePreview();
+    // Ctrl+S / Cmd+S 保存
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveCurrent);
   });
-}
-
-function updatePreview() {
-  if (!window.marked) return;
-  const title = $("title-input").value.trim();
-  const md = editor ? editor.getValue() : "";
-  const full = (title ? "# " + title + "\n\n" : "") + md;
-  $("preview").innerHTML = window.marked.parse(full);
 }
 
 // ===== UI =====
@@ -178,113 +130,131 @@ function showApp() {
   $("login-view").classList.add("hidden");
   $("app-view").classList.remove("hidden");
   if (!editor) initMonaco();
-  refreshList();
+  initResizer();
+  refreshTree();
 }
 
-async function refreshList() {
-  const ul = $("post-list");
-  ul.innerHTML = "";
-  const loading = document.createElement("li");
-  loading.className = "muted";
-  loading.textContent = "加载中…";
-  ul.appendChild(loading);
+async function refreshTree() {
+  const container = $("file-tree");
+  container.innerHTML = '<div class="tree-loading">加载中…</div>';
   try {
-    const posts = await listPosts();
-    ul.innerHTML = "";
-    if (posts.length === 0) {
-      const li = document.createElement("li");
-      li.className = "muted";
-      li.textContent = "（还没有文章）";
-      ul.appendChild(li);
-      return;
-    }
-    posts.forEach((p) => {
-      const li = document.createElement("li");
-      li.textContent = p.name.replace(/\.md$/, "");
-      li.dataset.path = p.path;
-      li.addEventListener("click", () => openPost(p.path, li));
-      if (currentPost && currentPost.path === p.path) li.classList.add("active");
-      ul.appendChild(li);
-    });
+    const results = await Promise.all(DIRS.map((d) => listDir(d.path).catch(() => [])));
+    container.innerHTML = "";
+    DIRS.forEach((d, i) => container.appendChild(buildGroup(d.label, results[i])));
+    setActiveInTree();
   } catch (e) {
-    ul.innerHTML = "";
-    const li = document.createElement("li");
-    li.className = "muted";
-    li.textContent = "加载失败：" + e.message;
-    ul.appendChild(li);
-    if (e.status === 401) {
-      toast("登录已过期，请重新登录", "error");
-    }
+    container.innerHTML = '<div class="tree-loading">加载失败：' + e.message + "</div>";
+    if (e.status === 401) toast("登录已过期，请重新登录", "error");
   }
 }
 
-async function openPost(path, li) {
+function buildGroup(label, files) {
+  const wrap = document.createElement("div");
+  wrap.className = "tree-group";
+  const h = document.createElement("div");
+  h.className = "tree-group-header";
+  h.textContent = label + "  (" + files.length + ")";
+  h.addEventListener("click", () => wrap.classList.toggle("collapsed"));
+  wrap.appendChild(h);
+
+  const ul = document.createElement("ul");
+  ul.className = "tree-files";
+  if (files.length === 0) {
+    const li = document.createElement("li");
+    li.className = "muted";
+    li.textContent = "（空）";
+    ul.appendChild(li);
+  }
+  files.forEach((f) => {
+    const li = document.createElement("li");
+    li.textContent = f.name.replace(/\.md$/, "");
+    li.dataset.path = f.path;
+    li.addEventListener("click", () => openFile(f.path));
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
+}
+
+function setActiveInTree() {
+  const cur = currentFile && currentFile.path;
+  document.querySelectorAll(".tree-files li").forEach((li) => {
+    li.classList.toggle("active", li.dataset.path === cur);
+  });
+}
+
+async function openFile(path) {
   try {
-    const post = await getPost(path);
-    if (!post) return;
-    currentPost = { path: post.path, sha: post.sha };
-    const parsed = parsePost(post.content);
-    $("title-input").value = parsed.title;
-    $("tags-input").value = parsed.tags.join(", ");
-    if (editor) editor.setValue(parsed.body);
-    document.querySelectorAll(".post-list li").forEach((x) => x.classList.remove("active"));
-    if (li) li.classList.add("active");
-    updatePreview();
+    const f = await getFile(path);
+    if (!f) return;
+    currentFile = { path: f.path, sha: f.sha, name: f.path.split("/").pop() };
+    editor.setValue(f.content);
+    setTab(currentFile.name);
+    setActiveInTree();
   } catch (e) {
     toast("打开失败：" + e.message, "error");
   }
 }
 
-function newPost() {
-  currentPost = null;
-  $("title-input").value = "";
-  $("tags-input").value = "";
-  if (editor) editor.setValue("");
-  document.querySelectorAll(".post-list li").forEach((x) => x.classList.remove("active"));
-  updatePreview();
-  $("title-input").focus();
+function newFile() {
+  const now = new Date();
+  const ts =
+    now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " +
+    pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds()) + " +0800";
+  const template =
+    "---\n" +
+    'title: ""\n' +
+    "date: " + ts + "\n" +
+    "tags: []\n" +
+    "---\n\n";
+  currentFile = null;
+  editor.setValue(template);
+  setTab("新建文章.md");
+  setActiveInTree();
+  editor.focus();
+  // 光标放到 title 的引号之间（第 2 行第 9 列）
+  editor.setPosition({ lineNumber: 2, column: 9 });
+}
+
+function newSlug() {
+  const now = new Date();
+  return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+    "-" + pad(now.getHours()) + pad(now.getMinutes());
 }
 
 async function saveCurrent() {
   if (!editor) return;
-  const title = $("title-input").value.trim();
-  const tags = $("tags-input").value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const body = editor.getValue();
-
-  if (!title) {
-    toast("请填写标题", "error");
-    return;
-  }
-  if (!body.trim()) {
-    toast("正文为空，没保存", "error");
+  const content = editor.getValue();
+  if (!content.trim()) {
+    toast("内容为空", "error");
     return;
   }
 
-  const content = buildPost(title, tags, body);
   let path, message;
-  if (currentPost) {
-    path = currentPost.path;
-    message = "更新：" + title;
+  if (currentFile) {
+    path = currentFile.path;
+    message = "更新 " + currentFile.name;
   } else {
-    path = CONFIG.postsDir + "/" + newSlug() + ".md";
-    message = "发布：" + title;
+    // 新建：默认进 _posts，时间戳命名
+    path = "_posts/" + newSlug() + ".md";
+    message = "新建文章";
   }
 
   const btn = $("save-btn");
   btn.disabled = true;
   btn.textContent = "保存中…";
   try {
-    const sha = currentPost ? currentPost.sha : undefined;
-    const res = await savePost(path, content, sha, message);
-    currentPost = { path: path, sha: res.content.sha };
+    const sha = currentFile ? currentFile.sha : undefined;
+    const res = await saveFile(path, content, sha, message);
+    currentFile = { path: path, sha: res.content.sha, name: path.split("/").pop() };
+    setTab(currentFile.name);
     toast("已保存 ✓ 约 1 分钟后网站更新", "success");
-    refreshList();
+    refreshTree();
   } catch (e) {
     if (e.status === 409 || e.status === 422) {
       toast("文件已变化，重新打开后再试", "error");
+    } else if (e.status === 401) {
+      toast("登录已过期，请重新登录", "error");
     } else {
       toast("保存失败：" + e.message, "error");
     }
@@ -294,11 +264,54 @@ async function saveCurrent() {
   }
 }
 
+function setTab(name) {
+  $("active-tab").querySelector(".tab-name").textContent = name || "未打开文件";
+}
+
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
-  currentPost = null;
+  currentFile = null;
   showLogin();
   toast("已登出");
+}
+
+// ===== 可拖拽侧边栏 =====
+function initResizer() {
+  if (initResizer._done) return;
+  initResizer._done = true;
+  const resizer = $("resizer");
+  const sidebar = $("sidebar");
+
+  // 恢复上次宽度
+  const saved = parseInt(localStorage.getItem(WIDTH_KEY), 10);
+  if (saved && saved >= 140 && saved <= 600) sidebar.style.width = saved + "px";
+
+  let dragging = false;
+  let startX = 0;
+  let startW = 0;
+
+  resizer.addEventListener("mousedown", (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    resizer.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const w = startW + (e.clientX - startX);
+    sidebar.style.width = Math.max(140, Math.min(600, w)) + "px";
+  });
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    localStorage.setItem(WIDTH_KEY, String(sidebar.offsetWidth));
+  });
 }
 
 // ===== OAuth 握手（配合已部署的 Worker）=====
@@ -309,12 +322,10 @@ function login() {
 
 function onAuthMessage(e) {
   const d = e.data;
-  // 1) Worker 先发 'authorizing:github'，我们要回一条消息触发它把 token 发过来
   if (d === "authorizing:github") {
-    e.source.postMessage("login", e.origin);
+    e.source.postMessage("login", e.origin); // 触发 Worker 发 token
     return;
   }
-  // 2) 收到 token
   if (typeof d === "string" && d.indexOf("authorization:github:success:") === 0) {
     try {
       const json = d.slice("authorization:github:success:".length);
@@ -333,16 +344,11 @@ function onAuthMessage(e) {
 // ===== 初始化 =====
 function init() {
   $("login-btn").addEventListener("click", login);
-  $("new-btn").addEventListener("click", newPost);
+  $("new-btn").addEventListener("click", newFile);
   $("save-btn").addEventListener("click", saveCurrent);
   $("logout-btn").addEventListener("click", logout);
-  $("title-input").addEventListener("input", debounce(updatePreview, 200));
-
-  if (getToken()) {
-    showApp();
-  } else {
-    showLogin();
-  }
+  if (getToken()) showApp();
+  else showLogin();
 }
 
 if (document.readyState === "loading") {
