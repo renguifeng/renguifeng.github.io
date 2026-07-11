@@ -6,7 +6,7 @@ backend:
   name: github
   repo: renguifeng/renguifeng.github.io
   branch: master
-  base_url: https://YOUR-WORKER.workers.dev   # ← 部署 Worker 后，把这个 URL 告诉 Claude，由它替换
+  base_url: https://soft-thunder-ce76.mailtoguifeng.workers.dev   # Cloudflare Worker（OAuth 中转）
   auth_endpoint: /auth/github
 
 # 上传的图片存在这个目录
