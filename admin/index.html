@@ -2,14 +2,71 @@
 layout: none
 ---
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>内容管理 · Renguifeng</title>
+  <title>写作后台 · Renguifeng</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" data-name="vs/editor/editor.main"
+        href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/editor/editor.main.css">
 </head>
 <body>
-  <!-- Sveltia CMS：Decap CMS 的现代重写，界面更清爽，兼容同一份 config.yml -->
-  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js"></script>
+
+  <!-- 登录页 -->
+  <div id="login-view" class="view">
+    <div class="login-card">
+      <div class="login-logo">✎</div>
+      <h1>写作后台</h1>
+      <p>用 GitHub 登录后开始写作。</p>
+      <button id="login-btn" class="btn-primary">用 GitHub 登录</button>
+      <p class="login-hint">登录会跳到 GitHub 授权，授权后自动返回。</p>
+    </div>
+  </div>
+
+  <!-- 主编辑界面 -->
+  <div id="app-view" class="view hidden">
+    <header class="topbar">
+      <div class="brand">Renguifeng · 写作后台</div>
+      <div class="topbar-actions">
+        <button id="new-btn" class="btn-ghost">+ 新建</button>
+        <button id="save-btn" class="btn-primary">保存</button>
+        <button id="logout-btn" class="btn-ghost">登出</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <!-- 侧边栏：文章列表 -->
+      <aside class="sidebar">
+        <div class="sidebar-header">文章</div>
+        <ul id="post-list" class="post-list"></ul>
+      </aside>
+
+      <!-- 编辑区 -->
+      <section class="editor-pane">
+        <div class="meta-bar">
+          <input id="title-input" class="meta-input" placeholder="文章标题" autocomplete="off" />
+          <input id="tags-input" class="meta-input meta-tags" placeholder="标签，逗号分隔" autocomplete="off" />
+        </div>
+        <div id="editor" class="editor"></div>
+      </section>
+
+      <!-- 预览区 -->
+      <section class="preview-pane">
+        <div class="preview-header">预览</div>
+        <article id="preview" class="preview"></article>
+      </section>
+    </div>
+  </div>
+
+  <!-- 提示条 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Monaco AMD loader -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <!-- Markdown 解析 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 应用逻辑 -->
+  <script src="app.js"></script>
 </body>
 </html>
