@@ -1,52 +1,59 @@
-(function($) {
-$(document).ready(function(){
+// Renguifeng.github.io
+// 轻量增强脚本：① 导航当前区块高亮  ② 页脚年份自动更新
+// 原生 JS，无依赖。即使加载失败也不影响页面展示。
 
-  // putting lines by the pre blocks
-  $("pre").each(function(){
-    var pre = $(this).text().split("\n");
-    var lines = new Array(pre.length+1);
-    for(var i = 0; i < pre.length; i++) {
-      var wrap = Math.floor(pre[i].split("").length / 70)
-      if (pre[i]==""&&i==pre.length-1) {
-        lines.splice(i, 1);
-      } else {
-        lines[i] = i+1;
-        for(var j = 0; j < wrap; j++) {
-          lines[i] += "\n";
-        }
-      }
-    }
-    $(this).before("<pre class='lines'>" + lines.join("\n") + "</pre>");
-  });
+(function () {
+  "use strict";
 
-  var headings = [];
-
-  var collectHeaders = function(){
-    headings.push({"top":$(this).offset().top - 15,"text":$(this).text()});
+  // 页脚年份
+  var yearEl = document.getElementById("year");
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
   }
 
-  if($(".markdown-body h1").length > 1) $(".markdown-body h1").each(collectHeaders)
-  else if($(".markdown-body h2").length > 1) $(".markdown-body h2").each(collectHeaders)
-  else if($(".markdown-body h3").length > 1) $(".markdown-body h3").each(collectHeaders)
+  // 导航高亮：滚动到哪个区块，对应的导航项就高亮
+  var navLinks = Array.prototype.slice.call(
+    document.querySelectorAll(".nav-links a")
+  );
+  var sections = navLinks
+    .map(function (a) {
+      var id = a.getAttribute("href");
+      return id && id.charAt(0) === "#" ? document.querySelector(id) : null;
+    })
+    .filter(Boolean);
 
-  $(window).scroll(function(){
-    if(headings.length==0) return true;
-    var scrolltop = $(window).scrollTop() || 0;
-    if(headings[0] && scrolltop < headings[0].top) {
-      $(".current-section").css({"opacity":0,"visibility":"hidden"});
-      return false;
+  if (!sections.length || !("IntersectionObserver" in window)) {
+    return; // 不支持就保持纯静态，不影响使用
+  }
+
+  var activeLink = null;
+
+  var observer = new IntersectionObserver(
+    function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+
+        var id = "#" + entry.target.id;
+        var match = navLinks.filter(function (a) {
+          return a.getAttribute("href") === id;
+        })[0];
+
+        if (!match) return;
+        if (activeLink === match) return;
+
+        if (activeLink) activeLink.classList.remove("active");
+        match.classList.add("active");
+        activeLink = match;
+      });
+    },
+    {
+      // 让“区块顶部进入视口约一半时”视为当前区块
+      rootMargin: "-45% 0px -50% 0px",
+      threshold: 0
     }
-    $(".current-section").css({"opacity":1,"visibility":"visible"});
-    for(var i in headings) {
-      if(scrolltop >= headings[i].top) {
-        $(".current-section .name").text(headings[i].text);
-      }
-    }
+  );
+
+  sections.forEach(function (s) {
+    observer.observe(s);
   });
-
-  $(".current-section a").click(function(){
-    $(window).scrollTop(0);
-    return false;
-  })
-});
-})(jQuery)
+})();
