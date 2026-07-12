@@ -1,0 +1,19 @@
+---
+layout: default
+title: "搜索"
+description: "搜索本站所有文章。"
+---
+
+<section class="section section-top" id="top">
+  <div class="container">
+    <h1 class="page-title">搜索</h1>
+    <p class="section-desc">在所有文章的标题、标签、分类、正文里查找。</p>
+    <div class="search-box">
+      <input id="site-search-input" type="search" placeholder="输入关键词…" autocomplete="off">
+    </div>
+    <div id="site-search-results" class="post-card-grid"></div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+<script src="{{ '/javascripts/search.js' | relative_url }}" defer></script>

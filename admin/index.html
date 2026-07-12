@@ -30,6 +30,7 @@ layout: none
       <div class="brand">Renguifeng · 文章管理</div>
       <div class="topbar-actions">
         <button id="new-btn" class="btn-ghost">+ 新建</button>
+        <button id="media-btn" class="btn-ghost">🖼 媒体库</button>
         <button id="save-btn" class="btn-primary">保存</button>
         <button id="logout-btn" class="btn-ghost">登出</button>
       </div>
@@ -44,6 +45,12 @@ layout: none
         <div class="view-switcher">
           <button id="view-files-btn" class="view-btn active">文件</button>
           <button id="view-tags-btn" class="view-btn">标签</button>
+          <button id="view-categories-btn" class="view-btn">分类</button>
+        </div>
+        <div class="status-filter" id="status-filter">
+          <button id="filter-all-btn" class="view-btn active">全部</button>
+          <button id="filter-published-btn" class="view-btn">已发布</button>
+          <button id="filter-draft-btn" class="view-btn">草稿</button>
         </div>
         <div class="sidebar-content" id="sidebar-content"></div>
       </aside>
@@ -68,6 +75,23 @@ layout: none
   <!-- 提示条 -->
   <div id="toast" class="toast hidden"></div>
 
+  <!-- 媒体库弹窗 -->
+  <div id="media-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🖼 媒体库</h2>
+        <button id="media-close" class="btn-ghost">×</button>
+      </div>
+      <div class="modal-upload">
+        <input type="file" id="media-upload-input" accept="image/*" multiple>
+        <span class="login-hint">选择图片,自动上传到 images/uploads/</span>
+      </div>
+      <div id="media-grid" class="media-grid"></div>
+    </div>
+  </div>
+
+  <!-- js-yaml:frontmatter 解析(同步加载,需在 app.js 之前)-->
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <!-- Monaco AMD loader -->
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
   <!-- 应用逻辑 -->

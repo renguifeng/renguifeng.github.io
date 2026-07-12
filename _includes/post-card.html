@@ -10,6 +10,9 @@
       {%- if post.tags.size > 0 -%}
         <span class="post-card-tags"> · {{ post.tags | join: " / " }}</span>
       {%- endif -%}
+      {%- if post.category -%}
+        <span class="post-card-tags"> · 📁 {{ post.category | escape }}</span>
+      {%- endif -%}
     </p>
     <p class="post-card-excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
   </a>

@@ -626,6 +626,37 @@ section[id], #top { scroll-margin-top: calc(var(--nav-h) + 16px); }
 .tag-post-list a { font-weight: 600; }
 .tag-post-date { color: var(--text-muted); font-size: 14px; white-space: nowrap; }
 
+/* ---------- 评论(Giscus)---------- */
+.comments {
+  padding: 8px 0 80px;
+}
+.comments-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.comments .giscus,
+.comments .giscus-frame { max-width: 100%; }
+
+/* ---------- 搜索页 ---------- */
+.search-box {
+  margin: 0 0 28px;
+}
+.search-box input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color .2s ease;
+}
+.search-box input:focus { border-color: var(--accent); }
+.search-box input::placeholder { color: var(--text-muted); }
+
 /* ---------- 尊重「减少动效」偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

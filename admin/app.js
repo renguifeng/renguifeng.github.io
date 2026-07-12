@@ -82,12 +82,31 @@ async function deleteFile(path, sha, message) {
 }
 function parseFrontmatter(raw) {
   const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!m) return { title: "", tags: [] };
+  const empty = { title: "", tags: [], category: "", published: true, date: "", excerpt: "" };
+  if (!m) return empty;
+  // 优先用 js-yaml 解析(支持任意字段、多行、引号);CDN 不可用或 YAML 非法时降级正则
+  if (typeof jsyaml !== "undefined") {
+    try {
+      const obj = jsyaml.load(m[1]) || {};
+      const tags = Array.isArray(obj.tags)
+        ? obj.tags.map(String).filter(Boolean)
+        : typeof obj.tags === "string" && obj.tags.trim() ? [obj.tags.trim()] : [];
+      return {
+        title: obj.title != null ? String(obj.title) : "",
+        tags: tags,
+        category: obj.category != null ? String(obj.category) : "",
+        published: obj.published !== false, // 缺省视为已发布
+        date: obj.date != null ? String(obj.date) : "",
+        excerpt: obj.excerpt != null ? String(obj.excerpt) : "",
+      };
+    } catch (e) { /* 解析失败,走降级 */ }
+  }
   const fm = m[1];
   const title = (fm.match(/^title:\s*"?(.*?)"?\s*$/m) || [])[1] || "";
   const tagsLine = (fm.match(/^tags:\s*\[(.*)\]/m) || [])[1] || "";
   const tags = tagsLine.split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
-  return { title: title, tags: tags };
+  const cat = (fm.match(/^category:\s*"?(.*?)"?\s*$/m) || [])[1] || "";
+  return { title: title, tags: tags, category: cat, published: true, date: "", excerpt: "" };
 }
 
 // ===== 图片上传 =====
@@ -145,6 +164,74 @@ function onEditorDrop(e) {
   const img = Array.from(files).find((f) => f.type && f.type.indexOf("image/") === 0);
   if (img) { e.preventDefault(); e.stopImmediatePropagation(); uploadAndInsert(img); }
 }
+
+// ===== 媒体库 =====
+const RAW_BASE = "https://raw.githubusercontent.com/" + CONFIG.owner + "/" + CONFIG.repo + "/" + CONFIG.branch + "/";
+const CDN_BASE = "https://cdn.jsdelivr.net/gh/" + CONFIG.owner + "/" + CONFIG.repo + "@" + CONFIG.branch + "/";
+const IMG_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i;
+function thumbUrl(path) { return CDN_BASE + path; } // 优先 jsdelivr(有缓存更快)
+function buildMediaCell(f) {
+  const cell = document.createElement("div");
+  cell.className = "media-cell";
+  const img = document.createElement("img");
+  img.src = thumbUrl(f.path);
+  img.alt = f.name; img.loading = "lazy";
+  img.onerror = function () { if (this.src.indexOf(RAW_BASE) < 0) this.src = RAW_BASE + f.path; }; // 回退 raw
+  cell.appendChild(img);
+  const info = document.createElement("div");
+  info.className = "media-info";
+  info.textContent = f.name;
+  info.title = f.name;
+  cell.appendChild(info);
+  const actions = document.createElement("div");
+  actions.className = "media-actions";
+  const ins = document.createElement("button");
+  ins.className = "btn-ghost"; ins.textContent = "插入";
+  ins.addEventListener("click", (e) => { e.stopPropagation(); insertImageUrl(f.path); });
+  actions.appendChild(ins);
+  const del = document.createElement("button");
+  del.className = "btn-ghost"; del.textContent = "删";
+  del.addEventListener("click", (e) => { e.stopPropagation(); deleteMedia(f.path, f.name, f.sha, cell); });
+  actions.appendChild(del);
+  cell.appendChild(actions);
+  return cell;
+}
+async function openMediaLib() {
+  const modal = $("media-modal");
+  modal.classList.remove("hidden");
+  const grid = $("media-grid");
+  grid.innerHTML = '<div class="tree-loading">加载中…</div>';
+  try {
+    let files = await gh("images/uploads");
+    if (!Array.isArray(files)) files = [];
+    files = files.filter((f) => f.type === "file" && IMG_RE.test(f.name)).sort((a, b) => b.name.localeCompare(a.name));
+    grid.innerHTML = "";
+    if (!files.length) { grid.innerHTML = '<div class="tree-loading">还没有图片,点上方选择文件上传</div>'; return; }
+    files.forEach((f) => grid.appendChild(buildMediaCell(f)));
+  } catch (e) {
+    grid.innerHTML = (e.status === 404)
+      ? '<div class="tree-loading">还没有图片,点上方选择文件上传</div>'
+      : '<div class="tree-loading">加载失败：' + escapeHtml(e.message) + "</div>";
+  }
+}
+function insertImageUrl(path) {
+  if (!editor) return;
+  const sel = editor.getSelection();
+  editor.executeEdits("insert-image", [{ range: sel, text: "![](/" + path + ")", forceMoveMarkers: true }]);
+  editor.focus();
+  toast("已插入图片", "success");
+}
+async function deleteMedia(path, name, sha, cell) {
+  if (!window.confirm('删除图片 "' + name + '"？\n\n引用它的文章会显示裂图,此操作不可撤销。')) return;
+  try {
+    await deleteFile(path, sha, "删除图片 " + name);
+    cell.remove();
+    toast("已删除 " + name, "success");
+  } catch (e) {
+    toast(e.status === 401 ? "登录已过期，请重新登录" : "删除失败：" + e.message, "error");
+  }
+}
+function closeMediaLib() { $("media-modal").classList.add("hidden"); }
 
 // ===== 本地草稿（防丢失）=====
 function draftKey(path) { return "draft:" + path; }
@@ -225,7 +312,7 @@ async function loadCache() {
     fileCache.clear();
     entries.filter(Boolean).forEach(({ meta, data }) => {
       const fm = parseFrontmatter(data.content);
-      fileCache.set(data.path, { path: data.path, name: meta.name, sha: data.sha, content: data.content, title: fm.title, tags: fm.tags });
+      fileCache.set(data.path, { path: data.path, name: meta.name, sha: data.sha, content: data.content, title: fm.title, tags: fm.tags, category: fm.category, published: fm.published });
     });
     cacheStatus = "ready";
   } catch (e) {
@@ -327,7 +414,7 @@ function newFile() {
   const now = new Date();
   const ts = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " +
     pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds()) + " +0800";
-  const template = "---\n" + 'title: ""\n' + "date: " + ts + "\n" + "tags: []\n" + "---\n\n";
+  const template = "---\n" + 'title: ""\n' + "date: " + ts + "\n" + "tags: []\n" + 'category: ""\n' + "---\n\n";
   const model = monaco.editor.createModel(template, "markdown");
   const tab = { path: id, name: "新建文章.md", sha: null, model: model, dirty: true, viewState: null, isNew: true };
   model.updateOptions({ tabSize: 2 });
@@ -372,7 +459,7 @@ async function saveCurrent() {
     clearDraft(oldPath);
     clearDraft(path);
     const fm = parseFrontmatter(content);
-    fileCache.set(path, { path: path, name: tab.name, sha: tab.sha, content: content, title: fm.title, tags: fm.tags });
+    fileCache.set(path, { path: path, name: tab.name, sha: tab.sha, content: content, title: fm.title, tags: fm.tags, category: fm.category, published: fm.published });
     refreshTabBar();
     renderSidebar();
     toast("已保存 ✓ 约 1 分钟后网站更新", "success");
@@ -397,6 +484,82 @@ async function removeFile(path, name, sha) {
     renderSidebar();
   } catch (e) {
     toast(e.status === 401 ? "登录已过期，请重新登录" : "删除失败：" + e.message, "error");
+  }
+}
+
+// ===== 发布 / 撤回(文件在 _drafts ↔ _posts 之间移动)=====
+// 文件名规则:_drafts/slug.md  ↔  _posts/YYYY-MM-DD-slug.md
+function postSlugFromName(name) {
+  return name.replace(/^(\d{4}-\d{2}-\d{2}-)?(.+?)\.md$/, "$2");
+}
+function draftFilename(slug) { return "_drafts/" + slug + ".md"; }
+function postFilename(slug) {
+  const d = new Date();
+  return "_posts/" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "-" + slug + ".md";
+}
+// 草稿 → 发布:先 PUT 目标、后 DELETE 源(PUT 失败草稿还在,可重试)
+async function publishFile(path, name, sha) {
+  const slug = postSlugFromName(name);
+  const dest = postFilename(slug);
+  if (!window.confirm('发布 "' + slug + '" 到 _posts？\n→ ' + dest + "\n\n约 1 分钟后网站可见。")) return;
+  setStatusInfo("发布中…");
+  try {
+    const src = await getFile(path);
+    if (!src) { toast("找不到源文件", "error"); return; }
+    await saveFile(dest, src.content, undefined, "发布 " + slug);
+    try { await deleteFile(path, src.sha, "发布后移除草稿 " + slug); }
+    catch (e2) { toast("已发布,但旧草稿删除失败,请手动清理 " + path, "error"); }
+    // 同步 tab 与缓存
+    const tab = findTab(path);
+    if (tab) {
+      tab.path = dest; tab.name = dest.split("/").pop(); tab.isNew = false;
+      const fresh = await getFile(dest);
+      if (fresh) tab.sha = fresh.sha;
+      clearDraft(path); clearDraft(dest);
+    }
+    if (activePath === path) activePath = dest;
+    fileCache.delete(path);
+    refreshTabBar();
+    renderSidebar();
+    toast("已发布 ✓", "success");
+  } catch (e) {
+    if (e.status === 409 || e.status === 422) toast("目标文件已存在,改名后重试", "error");
+    else if (e.status === 401) toast("登录已过期，请重新登录", "error");
+    else toast("发布失败：" + e.message, "error");
+  } finally {
+    setStatusInfo("");
+  }
+}
+// 发布 → 草稿:反向移动
+async function unpublishFile(path, name, sha) {
+  const slug = postSlugFromName(name);
+  const dest = draftFilename(slug);
+  if (!window.confirm('撤回 "' + slug + '" 为草稿？\n→ ' + dest + "\n\n网站将不再显示该文。")) return;
+  setStatusInfo("撤回中…");
+  try {
+    const src = await getFile(path);
+    if (!src) { toast("找不到源文件", "error"); return; }
+    await saveFile(dest, src.content, undefined, "撤回草稿 " + slug);
+    try { await deleteFile(path, src.sha, "撤回发布 " + slug); }
+    catch (e2) { toast("已撤回,但旧 _posts 文件删除失败,手动清理 " + path, "error"); }
+    const tab = findTab(path);
+    if (tab) {
+      tab.path = dest; tab.name = dest.split("/").pop(); tab.isNew = false;
+      const fresh = await getFile(dest);
+      if (fresh) tab.sha = fresh.sha;
+      clearDraft(path); clearDraft(dest);
+    }
+    if (activePath === path) activePath = dest;
+    fileCache.delete(path);
+    refreshTabBar();
+    renderSidebar();
+    toast("已撤回为草稿", "success");
+  } catch (e) {
+    if (e.status === 409 || e.status === 422) toast("草稿已存在同名,改名后重试", "error");
+    else if (e.status === 401) toast("登录已过期，请重新登录", "error");
+    else toast("撤回失败：" + e.message, "error");
+  } finally {
+    setStatusInfo("");
   }
 }
 
@@ -499,10 +662,12 @@ function hideContextMenu() { $("context-menu").classList.add("hidden"); }
 // ===== 左栏渲染 =====
 let currentView = "files";
 let searchQuery = "";
+let statusFilter = "all"; // all | published | draft(仅文件视图生效)
 
 function renderSidebar() {
   if (searchQuery) { renderSearchResults(searchQuery); return; }
   if (currentView === "tags") renderTagsView();
+  else if (currentView === "categories") renderCategoryView();
   else renderFileTree();
 }
 
@@ -513,7 +678,11 @@ async function renderFileTree() {
   try {
     const results = await Promise.all(DIRS.map((d) => listDir(d.path)));
     c.innerHTML = "";
-    DIRS.forEach((d, i) => c.appendChild(buildFileGroup(d.label, results[i])));
+    DIRS.forEach((d, i) => {
+      if (statusFilter === "published" && d.path !== "_posts") return;
+      if (statusFilter === "draft" && d.path !== "_drafts") return;
+      c.appendChild(buildFileGroup(d.label, d.path, results[i]));
+    });
     setActiveInTree();
   } catch (e) {
     c.innerHTML = '<div class="tree-loading">加载失败：' + escapeHtml(e.message) + "</div>";
@@ -521,7 +690,7 @@ async function renderFileTree() {
   }
 }
 
-function buildFileGroup(label, files) {
+function buildFileGroup(label, dirPath, files) {
   const wrap = document.createElement("div");
   wrap.className = "tree-group";
   const h = document.createElement("div");
@@ -537,16 +706,31 @@ function buildFileGroup(label, files) {
     li.textContent = "（空）";
     ul.appendChild(li);
   }
+  const isDraft = dirPath === "_drafts";
   files.forEach((f) => {
     const li = document.createElement("li");
     li.dataset.path = f.path;
     li.dataset.sha = f.sha;
     if (activePath === f.path) li.classList.add("active");
-    li.addEventListener("click", (e) => { if (e.target.classList.contains("del-btn")) return; openFile(f.path); });
+    li.addEventListener("click", (e) => {
+      if (e.target.classList.contains("del-btn") || e.target.classList.contains("state-btn")) return;
+      openFile(f.path);
+    });
     const name = document.createElement("span");
     name.className = "fname";
     name.textContent = f.name.replace(/\.md$/, "");
     li.appendChild(name);
+    // 状态切换:草稿 ↗ 发布 / 发布 ↙ 撤回
+    const stBtn = document.createElement("button");
+    stBtn.className = "state-btn " + (isDraft ? "pub-btn" : "unpub-btn");
+    stBtn.title = isDraft ? "发布到 _posts" : "撤回为草稿";
+    stBtn.textContent = isDraft ? "↗" : "↙";
+    stBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (isDraft) publishFile(f.path, f.name, f.sha);
+      else unpublishFile(f.path, f.name, f.sha);
+    });
+    li.appendChild(stBtn);
     const del = document.createElement("button");
     del.className = "del-btn";
     del.title = "删除";
@@ -580,6 +764,46 @@ function renderTagsView() {
     const h = document.createElement("div");
     h.className = "tag-group-header";
     h.textContent = tag;
+    const cnt = document.createElement("span");
+    cnt.className = "count";
+    cnt.textContent = "(" + entries.length + ")";
+    h.appendChild(cnt);
+    h.addEventListener("click", () => wrap.classList.toggle("collapsed"));
+    wrap.appendChild(h);
+    const ul = document.createElement("ul");
+    ul.className = "tag-files";
+    entries.forEach((e) => {
+      const li = document.createElement("li");
+      li.textContent = e.title || e.name.replace(/\.md$/, "");
+      li.title = e.path;
+      li.addEventListener("click", () => openFile(e.path));
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    c.appendChild(wrap);
+  });
+}
+
+// 分类视图:按 frontmatter 的 category 聚合(单值)。复用标签视图的交互。
+function renderCategoryView() {
+  const c = $("sidebar-content");
+  if (cacheStatus !== "ready") { c.innerHTML = '<div class="tree-loading">索引中… 正在加载文章内容</div>'; return; }
+  const catMap = new Map();
+  fileCache.forEach((e) => {
+    if (!e.category) return; // 无分类的文章不列入
+    if (!catMap.has(e.category)) catMap.set(e.category, []);
+    catMap.get(e.category).push(e);
+  });
+  const cats = Array.from(catMap.keys()).sort();
+  c.innerHTML = "";
+  if (cats.length === 0) { c.innerHTML = '<div class="tree-loading">还没有带分类的文章(在 frontmatter 加 category: 分类名)</div>'; return; }
+  cats.forEach((cat) => {
+    const entries = catMap.get(cat);
+    const wrap = document.createElement("div");
+    wrap.className = "tag-group";
+    const h = document.createElement("div");
+    h.className = "tag-group-header";
+    h.textContent = cat;
     const cnt = document.createElement("span");
     cnt.className = "count";
     cnt.textContent = "(" + entries.length + ")";
@@ -655,7 +879,19 @@ function switchView(name) {
   currentView = name;
   $("view-files-btn").classList.toggle("active", name === "files");
   $("view-tags-btn").classList.toggle("active", name === "tags");
+  $("view-categories-btn").classList.toggle("active", name === "categories");
+  $("status-filter").style.display = (name === "files") ? "" : "none";
   renderSidebar();
+}
+function updateFilterBtns() {
+  $("filter-all-btn").classList.toggle("active", statusFilter === "all");
+  $("filter-published-btn").classList.toggle("active", statusFilter === "published");
+  $("filter-draft-btn").classList.toggle("active", statusFilter === "draft");
+}
+function setStatusFilter(name) {
+  statusFilter = name;
+  updateFilterBtns();
+  if (currentView === "files") renderSidebar();
 }
 const onSearchInput = debounce(function () {
   searchQuery = $("search-input").value.trim();
@@ -747,6 +983,28 @@ function init() {
   $("search-input").addEventListener("input", onSearchInput);
   $("view-files-btn").addEventListener("click", () => switchView("files"));
   $("view-tags-btn").addEventListener("click", () => switchView("tags"));
+  $("view-categories-btn").addEventListener("click", () => switchView("categories"));
+  $("filter-all-btn").addEventListener("click", () => setStatusFilter("all"));
+  $("filter-published-btn").addEventListener("click", () => setStatusFilter("published"));
+  $("filter-draft-btn").addEventListener("click", () => setStatusFilter("draft"));
+  $("media-btn").addEventListener("click", openMediaLib);
+  $("media-close").addEventListener("click", closeMediaLib);
+  $("media-upload-input").addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setStatusInfo("上传 " + files.length + " 张…");
+    try {
+      for (const f of files) await uploadImage(f);
+      toast("已上传 " + files.length + " 张图片", "success");
+      openMediaLib(); // 刷新列表
+    } catch (e2) {
+      toast(e2.status === 401 ? "登录已过期，请重新登录" : "上传失败：" + e2.message, "error");
+    } finally {
+      e.target.value = "";
+      setStatusInfo("");
+    }
+  });
+  $("media-modal").addEventListener("click", (e) => { if (e.target.id === "media-modal") closeMediaLib(); });
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P") && !e.shiftKey && !e.altKey) {
       e.preventDefault();

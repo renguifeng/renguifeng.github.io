@@ -35,6 +35,16 @@ plugins:
   - jekyll-sitemap     # 自动生成 /sitemap.xml
   - jekyll-paginate    # 文章列表分页
 
+# ---------- 评论(Giscus,可选)----------
+# 启用:把下面 repo / repo_id / category_id 填成你的(去 https://giscus.app 配置生成)。
+# 前置:仓库需 public + Settings 勾选 Discussions + 安装 giscus app。
+# 留空(repo 为空)则文章页不显示评论。
+giscus:
+  repo: ""                 # 例 "renguifeng/renguifeng.github.io"
+  repo_id: ""              # giscus 生成
+  category: "Announcements"
+  category_id: ""          # giscus 生成
+
 # ---------- 默认布局 ----------
 defaults:
   - scope:

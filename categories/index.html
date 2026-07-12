@@ -1,0 +1,48 @@
+---
+layout: default
+title: "分类"
+description: "按分类浏览所有文章。"
+---
+
+<section class="section section-top" id="top">
+  <div class="container">
+    <h1 class="page-title">分类</h1>
+    <p class="section-desc">按分类浏览所有文章。</p>
+
+    {% assign all_categories = site.categories | sort %}
+
+    {% if all_categories.size == 0 %}
+      <p class="muted">还没有带分类的文章。在文章 frontmatter 里加 <code>category: 分类名</code> 即可。</p>
+    {% else %}
+
+      <!-- 分类云:快速跳转 -->
+      <div class="chips tag-cloud">
+        {% for category in all_categories %}
+          <a class="chip-link" href="#{{ category[0] }}">
+            {{ category[0] }} <span class="tag-count">{{ category[1].size }}</span>
+          </a>
+        {% endfor %}
+      </div>
+
+      <!-- 每个分类的文章列表 -->
+      <div class="tag-groups">
+        {% for category in all_categories %}
+          <section class="tag-group card" id="{{ category[0] }}">
+            <h2 class="tag-group-title">
+              {{ category[0] }} <span class="tag-count">{{ category[1].size }}</span>
+            </h2>
+            <ul class="tag-post-list">
+              {% for post in category[1] %}
+                <li>
+                  <a href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+                  <span class="tag-post-date">{{ post.date | date: "%Y-%m-%d" }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endfor %}
+      </div>
+
+    {% endif %}
+  </div>
+</section>
